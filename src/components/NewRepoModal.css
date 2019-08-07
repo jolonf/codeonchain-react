@@ -1,0 +1,68 @@
+
+#new-repo-overlay {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.26);
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  z-index: 2;
+  cursor: pointer;
+}
+
+#new-repo-dialog {
+  box-sizing: border-box;
+  width: var(--width);
+  max-width: 100%;
+  margin: auto;
+  margin-top: 100px;
+  background-color: white;
+  padding: 30px;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.26);
+}
+
+#new-repo-dialog table {
+  width: auto;
+  border: none;
+  margin-left: 0px;
+}
+
+#new-repo-dialog tr:hover {
+  background: none;
+}
+
+#dialog-buttons {
+  display: flex;
+  justify-content: center;
+}
+
+.input-note {
+  font-size: 0.8em;
+}
+
+td {
+  vertical-align: top;
+}
+
+#repo-master-key {
+  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+  color: orange;
+}
+
+.hidden {
+  vertical-align: middle;
+}
+
+#repo-hidden {
+/*  vertical-align: middle;*/
+}
+
+#new-repo-money-button {
+  margin: auto;
+}
+
+.checkbox-input {
+  vertical-align: text-bottom;
+}

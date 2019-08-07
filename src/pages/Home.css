@@ -1,0 +1,59 @@
+:root {
+  --width: 980px;
+  --border: 1px solid rgb(193, 207, 210);
+}
+
+body {
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  
+}
+
+a {
+  text-decoration: none;
+  color: #0366d6;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+
+#repos-tabs {
+  display: flex;
+  width: var(--width);
+  max-width: 100%;
+  margin: auto;
+}
+
+.tab {
+  padding: 10px;
+  border: 1px solid rgba(197, 203, 209, 0);
+  border-bottom-width: 0px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.tab-selected {
+  border: 1px solid rgb(197, 203, 209);
+  border-bottom-width: 0px;
+  background-color: #eaecef;
+}
+
+.tab a {
+  text-decoration: none;
+  color: #586069;
+}
+
+.tab-selected a {
+  color: #24292e;
+}
+
+.tab a:hover {
+  color: #24292e;
+}
+
+#footer-message {
+  color: grey;
+  text-align: center;
+  font-size: 0.8em;
+}
