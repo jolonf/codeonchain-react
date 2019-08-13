@@ -1,5 +1,6 @@
 import BitIndexSDK from 'bitindex-sdk';
 import bsv from 'bsv';
+import { readAsArrayBuffer } from 'promise-file-reader';
 import { Buffer } from 'buffer';
 //import { inflate } from 'pako';
 
@@ -9,6 +10,7 @@ import { BProtocol } from '../protocols/b.protocol';
 import { DerivationPathProtocol } from '../protocols/derivation_path.protocol';
 import { MetanetProtocol } from '../protocols/metanet.protocol';
 import { DirectoryProtocol } from '../protocols/directory.protocol';
+import { FileTree } from './FileTree';
 
 export const METANET_FLAG     = 'meta';
 export const MIN_OUTPUT_VALUE = 546;
@@ -37,6 +39,15 @@ export class Metanet {
     });
 
     return metanetNodes[0];
+  }
+
+  static async getChildren(txId: string): Promise<MetanetNode[]> {
+    const results = await Promise.all([
+      this.getChildFiles(txId),
+      this.getChildDirectories(txId)
+    ]);
+
+    return results[0].concat(results[1]);
   }
 
   static async getChildFiles(txId: string): Promise<MetanetNode[]> {
@@ -81,34 +92,6 @@ export class Metanet {
     const json = await response.json();
     console.log(json);
     const children = [];
-
-/*    for (const metanet of json.metanet) { 
-      let metanetNode = new MetanetNode();
-
-      metanetNode.nodeAddress = metanet.out[0].s3;
-      metanetNode.nodeTxId = metanet.tx.h;
-      metanetNode.parentTxId = metanet.out[0].s4;
-      metanetNode.protocol = metanet.out[0].s6;
-      metanetNode.mimeType = metanet.out[0].s8;
-      metanetNode.encoding = metanet.out[0].s9;
-
-      if (metanetNode.isDirectory()) {
-        metanetNode.name = metanet.out[0].s7;
-      } else {
-        metanetNode.name = metanet.out[0].s10;
-      }
-
-      if (metanetNode.mimeType && metanetNode.mimeType.trim() === '') {
-        metanetNode.mimeType = this.guessMimeType(metanetNode.name);
-      }
-
-      metanetNode.derivationPath = metanet.out[0].s13;
-
-      metanetNode.dataString = metanet.out[0].s7;
-      metanetNode.dataHex = metanet.out[0].h7;
-
-      children.push(metanetNode);
-    }*/
 
     const items = json.u.concat(json.c);
 
@@ -170,14 +153,108 @@ export class Metanet {
     return Buffer.concat(buffers);
   }
 
-  static async createTx(masterKey: any, derivationPath: string, fundingTxId: string | null, vout: number, parentTxId: string | null, payload: (string | Buffer)[]) {
-    const parentKey = masterKey.deriveChild(this.parentDerivationPath(derivationPath));
-    const nodeAddress = masterKey.deriveChild(derivationPath).publicKey.toAddress().toString();
+  /**
+   * Estimates fees to send txs represented by the files in the array of file trees.
+   * @param fileTrees 
+   */
+  static async estimateFileTreesFee(masterKey: any, parent: MetanetNode, fileTrees: FileTree[], callback: Function): Promise<number> {
+    let fee = 0;
+
+    // If the fileTree already exists, get children
+    if (parent.nodeTxId) {
+      const children = await Metanet.getChildren(parent.nodeTxId);
+      parent.children = children;
+    }
+
+    let nextFreeDerivationIndex = parent.nextFreeDerivationIndex();
+
+    for (const fileTree of fileTrees) {
+
+      // Check if there is already a Metanet Node on the chain for this file tree
+      let metanetNode = parent.childWithName(fileTree.name);
+
+      if (!metanetNode) {
+        metanetNode = new MetanetNode();
+        metanetNode.name = fileTree.name;
+        metanetNode.derivationPath = `${parent.derivationPath}/${nextFreeDerivationIndex}`;
+        metanetNode.nodeAddress = masterKey.deriveChild(metanetNode.derivationPath).publicKey.toAddress().toString();
+        nextFreeDerivationIndex++;
+        parent.children.push(metanetNode);
+      }
+
+      metanetNode.parentTxId = parent.nodeTxId;
+
+      callback(fileTree.name);
+      console.log(`Estimating fees for: [${metanetNode.derivationPath}] ${fileTree.name}`);
+
+      // Create a node for this file tree
+      if (fileTree.file) {
+        // Estimate fee for file
+        // Read in data
+        const arrayBuffer = await readAsArrayBuffer(fileTree.file);
+        const buffer = Buffer.from(arrayBuffer);
+        const fileTx = await this.fileDummyTx(masterKey, parent, metanetNode, buffer);
+        metanetNode.fee = this.estimateFee(fileTx);
+        fee += metanetNode.fee;
+        console.log(`file fee: ${metanetNode.fee}`);
+      } else {
+        // Estimate fee for directory
+
+        // Directory tx
+        const folderTx = await this.folderDummyTx(masterKey, parent, metanetNode);
+        metanetNode.fee = this.estimateFee(folderTx);
+        fee += metanetNode.fee;
+        console.log(`folder fee: ${metanetNode.fee}`);
+
+        fee += await this.estimateFileTreesFee(masterKey, metanetNode, fileTree.children, callback);
+      }
+    }
+
+    return fee;
+  }
+
+  static async sendFileTrees(masterKey: any, fundingTxId: string, vout: number, parent: MetanetNode, fileTrees: FileTree[], callback: Function) {
+    parent.spentVouts = [];
+    for (const fileTree of fileTrees) {
+      callback(fileTree.name);
+      let metanetNode = parent.childWithName(fileTree.name);
+
+      if (metanetNode) {
+        metanetNode.parentTxId = parent.nodeTxId;
+        if (fileTree.file) {
+          // Read in data
+          const arrayBuffer = await readAsArrayBuffer(fileTree.file);
+          const buffer = Buffer.from(arrayBuffer);
+          const fileTx = await this.fileTx(masterKey, fundingTxId, parent, metanetNode, buffer);
+          metanetNode.nodeTxId = fileTx.id;
+          await this.send(fileTx);
+          vout++;
+        } else {
+          const folderTx = await this.folderTx(masterKey, fundingTxId, parent, metanetNode);
+          metanetNode.nodeTxId = folderTx.id;
+          await this.send(folderTx);
+          vout++;
+          vout = await this.sendFileTrees(masterKey, fundingTxId, vout, metanetNode, fileTree.children, callback);
+        }
+      } else {
+        console.log(`Child not found: ${fileTree.name}`);
+      }
+    }
+    return vout;
+  }
+
+  static async createTx(masterKey: any, 
+                        fundingTxId: string | null, 
+                        parent: MetanetNode,
+                        metanetNode: MetanetNode,
+                        payload: (string | Buffer)[]) {
+    const parentKey = masterKey.deriveChild(parent.derivationPath);
+    const nodeAddress = masterKey.deriveChild(metanetNode.derivationPath).publicKey.toAddress().toString();
 
     const opReturnPayload = [
-      ...MetanetProtocol.from(nodeAddress, parentTxId), '|',
+      ...MetanetProtocol.from(nodeAddress, metanetNode.parentTxId), '|',
       ...payload, '|',
-      ...DerivationPathProtocol.from(derivationPath)
+      ...DerivationPathProtocol.from(metanetNode.derivationPath)
     ];
 
     const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(opReturnPayload)];
@@ -189,8 +266,8 @@ export class Metanet {
 
     let utxo = null;
     if (fundingTxId) {
-      while (!(utxo = await this.findUtxo(parentKey.publicKey.toAddress().toString(), fundingTxId, vout))) {
-        console.log(`Waiting for UTXO for key: ${parentKey.publicKey.toAddress().toString()}, txid: ${fundingTxId}, vout: ${vout}`);
+      while (!(utxo = await this.findUtxoByFee(parent, fundingTxId, metanetNode.fee))) {
+        console.log(`Waiting for UTXO for key: ${parent.nodeAddress}, txid: ${fundingTxId}, fee: ${metanetNode.fee}`);
         await this.sleep(1000);
       }
     } else {
@@ -210,28 +287,28 @@ export class Metanet {
   }
 
   static parentDerivationPath(derivationPath: string): string {
-    console.log('parentDerivationPath from: ' + derivationPath)
+    //console.log('parentDerivationPath from: ' + derivationPath)
     const pathComponents = derivationPath.split('/');
     pathComponents.pop(); // remove last element
     return pathComponents.join('/');
   }
 
-  static async fileTx(masterKey: any, derivationPath: string, fundingTxId: string | null, vout: number, parentTxId: string | null, fileName: string, data: Buffer | string) {
-    const payload = BProtocol.from(data, fileName, ' ', ' ');
-    return this.createTx(masterKey, derivationPath, fundingTxId, vout, parentTxId, payload);
+  static async fileTx(masterKey: any, fundingTxId: string | null, parent: MetanetNode, metanetNode: MetanetNode, data: Buffer | string) {
+    const payload = BProtocol.from(data, metanetNode.name, ' ', ' ');
+    return this.createTx(masterKey, fundingTxId, parent, metanetNode, payload);
   }
 
-  static async fileDummyTx(masterKey: any, derivationPath: string, fileName: string, data: Buffer | string) {
-    return this.fileTx(masterKey, derivationPath, null, 0, null, fileName, data);
+  static async fileDummyTx(masterKey: any, parent: MetanetNode, metanetNode: MetanetNode, data: Buffer | string) {
+    return this.fileTx(masterKey, null, parent, metanetNode, data);
   }
 
-  static async folderTx(masterKey: any, derivationPath: string, fundingTxId: string | null, vout: number, parentTxId: string | null, folderName: string) {
-    const payload = DirectoryProtocol.from(folderName);
-    return this.createTx(masterKey, derivationPath, fundingTxId, vout, parentTxId, payload);
+  static async folderTx(masterKey: any, fundingTxId: string | null, parent: MetanetNode, metanetNode: MetanetNode) {
+    const payload = DirectoryProtocol.from(metanetNode.name);
+    return this.createTx(masterKey, fundingTxId, parent, metanetNode, payload);
   }
 
-  static async folderDummyTx(masterKey: any, derivationPath: string, parentTxId: string | null, folderName: string) {
-    return this.folderTx(masterKey, derivationPath, null, 0, parentTxId, folderName);
+  static async folderDummyTx(masterKey: any, parent: MetanetNode, metanetNode: MetanetNode) {
+    return this.folderTx(masterKey, null, parent, metanetNode);
   }
 
   /**
@@ -265,9 +342,16 @@ export class Metanet {
     return Math.max(tx._estimateFee(), MIN_OUTPUT_VALUE);
   }
 
-  static async findUtxo(publicKey: any, txId: string, voutIndex: number): Promise<any[]> {
+  static async findUtxoByVout(publicKey: any, txId: string, voutIndex: number): Promise<any[]> {
     const utxos = await this.bitindex.address.getUtxos(publicKey);
     return utxos.find((utxo: any) => utxo.txid === txId && utxo.vout === voutIndex);
+  }
+
+  static async findUtxoByFee(parent: MetanetNode, txId: string, fee: number): Promise<any[]> {
+    const utxos = await this.bitindex.address.getUtxos(parent.nodeAddress);
+    const utxo = utxos.find((utxo: any) => utxo.txid === txId && utxo.satoshis === fee && !parent.spentVouts.includes(utxo.vout));
+    parent.spentVouts.push(utxo.vout);
+    return utxo;
   }
 
   static async send(tx: any) {
@@ -276,6 +360,18 @@ export class Metanet {
       throw new Error(response);
     }
     return response;
+  }
+
+  /**
+   * Validates the master key xpriv by deriving the child key for the metanetNode from it
+   * derivation path and then compares the derived address with the metanetNode's address.
+   * @param xprivkey 
+   * @param metanetNode 
+   */
+  static validateMasterKey(xprivkey: string, metanetNode: MetanetNode): boolean {
+    const masterKey = bsv.HDPrivateKey(xprivkey);
+    const derivedAddress = masterKey.deriveChild(metanetNode.derivationPath).publicKey.toAddress().toString();
+    return metanetNode.nodeAddress === derivedAddress;
   }
 
   static async sleep(ms: number) {

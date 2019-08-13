@@ -53,6 +53,7 @@ class NewFolderModal extends React.Component<NewFolderProps> {
           </table>
           <div id='new-repo-money-button-container'>
             <div>
+              <IonButton onClick={() => this.props.onClose()} >Close</IonButton>
               <IonButton onClick={() => this.generateOutputs()} color='success'>Create Folder</IonButton>
             </div>
 
@@ -93,6 +94,9 @@ class NewFolderModal extends React.Component<NewFolderProps> {
   onMasterKeyChanged(e: React.ChangeEvent<HTMLInputElement>) {
     this.setState({xprivkey: e.target.value});
     this.setState({moneyButtonDisabled: true});
+    if (!Metanet.validateMasterKey(this.state.xprivkey, this.props.parent)) {
+      console.log('Incorrect Master Key');
+    }
   }
 
   onFolderNameChanged(e: React.ChangeEvent<HTMLInputElement>) {
@@ -100,6 +104,7 @@ class NewFolderModal extends React.Component<NewFolderProps> {
     this.setState({folderName: e.target.value});
     this.setState({moneyButtonDisabled: true});
   }
+
 
   async generateOutputs() {
     console.log('generate outputs');
@@ -111,15 +116,16 @@ class NewFolderModal extends React.Component<NewFolderProps> {
       // so that the .bsvignore and bsvpush.json files can be created
       const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
 
-      const folderTx = await Metanet.folderDummyTx(
-        masterKey, 
-        this.props.parent.nextFreeDerivationPath(), 
-        this.props.parent.nodeTxId, 
-        this.state.folderName);
+      const metanetNode = new MetanetNode();
+      metanetNode.name = this.state.folderName;
+      metanetNode.parentTxId = this.props.parent.nodeTxId;
+      metanetNode.derivationPath = this.props.parent.nextFreeDerivationPath();
+
+      const folderTx = await Metanet.folderDummyTx(masterKey, this.props.parent, metanetNode);
 
       const folderFee = folderTx.getFee() / 1e8;
 
-      const parentAddress = masterKey.deriveChild(this.props.parent.derivationPath).publicKey.toAddress().toString();
+      const parentAddress = this.props.parent.nodeAddress; //masterKey.deriveChild(this.props.parent.derivationPath).publicKey.toAddress().toString();
 
       console.log('Parent derivation path: ' + this.props.parent.derivationPath);
       console.log('Sending funds to parent address: ' + parentAddress);
@@ -144,13 +150,16 @@ class NewFolderModal extends React.Component<NewFolderProps> {
     console.log('funding txid: ' + fundingTxId);
     const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
 
+    const metanetNode = new MetanetNode();
+    metanetNode.name = this.state.folderName;
+    metanetNode.parentTxId = this.props.parent.nodeTxId;
+    metanetNode.derivationPath = this.props.parent.nextFreeDerivationPath();
+
     const folderTx = await Metanet.folderTx(
       masterKey, 
-      this.props.parent.nextFreeDerivationPath(), 
       fundingTxId,
-      0,
-      this.props.parent.nodeTxId, 
-      this.state.folderName);
+      this.props.parent,
+      metanetNode);
 
     console.log(`Sending folder transaction: ${folderTx.id}`);
     await Metanet.send(folderTx);

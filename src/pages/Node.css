@@ -59,6 +59,14 @@ div#money-button-container {
   margin-bottom: 10px;
 }
 
+.children-drag-highlight {
+  background: #f3f5f5;
+}
+
+.children-drag-highlight * {
+  pointer-events: none;
+}
+
 #directory-buttons-container {
   box-sizing: border-box;
   width: var(--width);

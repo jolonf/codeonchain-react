@@ -2,7 +2,7 @@ import './Home.css';
 import './Node.css';
 
 import { IonContent, IonRow, IonCol, IonGrid, IonButton, IonIcon } from '@ionic/react';
-import React from 'react';
+import React, { useState } from 'react';
 import { RouteComponentProps, withRouter } from 'react-router-dom';
 import { document, folder } from 'ionicons/icons';
 
@@ -15,6 +15,7 @@ import { BProtocol } from '../protocols/b.protocol';
 import { BcatProtocol } from '../protocols/bcat.protocol';
 import { Repo } from '../metanet/repo';
 import Banner from '../components/Banner';
+import AddFilesModal from '../components/AddFilesModal';
 import NewFolderModal from '../components/NewFolderModal';
 
 interface MatchParams {
@@ -28,7 +29,8 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     readme: '',
     fileData: null as (string | null),
     repo: null as (Repo | null),
-    newFolderModalOpen: false
+    newFolderModalOpen: false,
+    addFilesModalOpen: false,
   };
 
   render() {
@@ -44,9 +46,10 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
             {this.state.children.length > 0 &&
             <Children children={this.state.children} />}
             {this.state.metanetNode.isDirectory() &&
-            <DirectoryButtons onNewFolderButton={() => this.onNewFolderButton()} onNewFileButton={() => this.onNewFileButton()}/>}
+            <DirectoryButtons onNewFolderButton={() => this.onNewFolderButton()} onAddFilesButton={() => this.onAddFilesButton()}/>}
             <Readme text={this.state.readme} />
             <FileData metanetNode={metanetNode} data={this.state.fileData} />
+            <AddFilesModal isOpen={this.state.addFilesModalOpen} onClose={() => {this.addFilesModalClosed()}} parent={metanetNode} />
             <NewFolderModal isOpen={this.state.newFolderModalOpen} onClose={() => {this.newFolderModalClosed()}} parent={metanetNode} />
           </div>
         </IonContent>
@@ -131,12 +134,17 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     this.setState({newFolderModalOpen: true});
   }
 
-  onNewFileButton() {
-
+  onAddFilesButton() {
+    console.log('Add files button');
+    this.setState({addFilesModalOpen: true});
   }
 
   newFolderModalClosed() {
     this.setState({newFolderModalOpen: false});
+  }
+
+  addFilesModalClosed() {
+    this.setState({addFilesModalOpen: false});
   }
 }
 
@@ -183,17 +191,42 @@ interface ChildrenProps extends RouteComponentProps {
 }
 const Children = withRouter<ChildrenProps>(({children}) => {
 
+  const [highlight, setHighlight] = useState(false);
+
+  function onDragEnter(e: React.DragEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('onDragEnter');
+    setHighlight(true);
+  }
+
+  function onDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('onDragLeave');
+    setHighlight(false);
+  }
+
+  function onDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('onDrop');
+    console.log(e.dataTransfer.files);
+    setHighlight(false);
+  }
+
   const rows = children.map((child, index) => {
+    const icon = child.isDirectory() ? folder : document;
     return (
       <IonRow key={index}>
-        <IonCol size='2'><a href={'/tx/' + child.nodeTxId}>{child.name}</a></IonCol>
+        <IonCol size='2'><IonIcon icon={icon}/> <a href={'/tx/' + child.nodeTxId}>{child.name}</a></IonCol>
         <IonCol size='10'>{child.nodeTxId}</IonCol>
       </IonRow>
     );
   });
 
   return (
-    <div id='children-container'>
+    <div id='children-container' className={highlight ? 'children-drag-highlight' : ''} onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDrop={onDrop}>
       <IonGrid fixed>
         {rows}
       </IonGrid>
@@ -203,12 +236,12 @@ const Children = withRouter<ChildrenProps>(({children}) => {
 
 interface DirectoryButtonsProps extends RouteComponentProps {
   onNewFolderButton: Function;
-  onNewFileButton: Function;
+  onAddFilesButton: Function;
 }
-const DirectoryButtons = withRouter<DirectoryButtonsProps>(({onNewFileButton, onNewFolderButton}) => {
+const DirectoryButtons = withRouter<DirectoryButtonsProps>(({onAddFilesButton, onNewFolderButton}) => {
   return (
     <div id='directory-buttons-container'>
-      <IonButton onClick={() => onNewFileButton()} fill='outline' color='medium'><IonIcon slot='start' icon={document} /> + Files</IonButton>
+      <IonButton onClick={() => onAddFilesButton()} fill='outline' color='medium'><IonIcon slot='start' icon={document} /> + Files</IonButton>
       <IonButton onClick={() => onNewFolderButton()} fill='outline' color='medium'><IonIcon slot='start' icon={folder} /> + Folder</IonButton>
     </div>
   );

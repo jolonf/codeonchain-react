@@ -11,6 +11,7 @@ import { Metanet, METANET_FLAG } from "../metanet/metanet";
 import { DirectoryProtocol } from '../protocols/directory.protocol';
 import { DerivationPathProtocol } from '../protocols/derivation_path.protocol';
 import { IonButton } from "@ionic/react";
+import { MetanetNode } from "../metanet/metanet_node";
 
 interface NewRepoProps {
   isOpen: boolean;
@@ -158,6 +159,8 @@ class NewRepoModal extends React.Component<NewRepoProps> {
       // so that the .bsvignore and bsvpush.json files can be created
       const rootKey = this.state.masterKey.deriveChild('m/0');
       const rootAddress = rootKey.publicKey.toAddress().toString();
+      const rootNode = new MetanetNode();
+      rootNode.nodeAddress = rootAddress;
 
       bsvignoreData = `.bsvpush\n.git`;
       bsvpushData = JSON.stringify({
@@ -171,8 +174,14 @@ class NewRepoModal extends React.Component<NewRepoProps> {
       }, null, 2);
 
       // We aren't sending these transactions yet, just estimating the size to fund the parent
-      const bsvignoreTx = await Metanet.fileDummyTx(this.state.masterKey, 'm/0/0', '.bsvignore', bsvignoreData);
-      const bsvpushTx = await Metanet.fileDummyTx(this.state.masterKey, 'm/0/1', 'bsvpush.json', bsvpushData);
+      const bsvignoreNode = new MetanetNode();
+      bsvignoreNode.derivationPath = 'm/0/0';
+      bsvignoreNode.name = '.bsvignore';
+      const bsvpushNode = new MetanetNode();
+      bsvpushNode.derivationPath = 'm/0/1';
+      bsvpushNode.name = 'bsvpush.json';
+      const bsvignoreTx = await Metanet.fileDummyTx(this.state.masterKey, rootNode, bsvignoreNode, bsvignoreData);
+      const bsvpushTx = await Metanet.fileDummyTx(this.state.masterKey, rootNode, bsvpushNode, bsvpushData);
 
       const bsvignoreFee = bsvignoreTx.getFee() / 1e8;
       const bsvpushFee = bsvpushTx.getFee() / 1e8;
@@ -222,19 +231,35 @@ class NewRepoModal extends React.Component<NewRepoProps> {
   async onPayment(arg: any) {
     this.setState({message: 'Initialising repo...'});
     console.log('on payment');
-    const parentTxId = arg.txid;
-    console.log('parent txid: ' + parentTxId);
+    const fundingTxId = arg.txid;
+    console.log('funding/parent txid: ' + fundingTxId);
 
-    const bsvignoreTx = await Metanet.fileTx(this.state.masterKey, 'm/0/0', parentTxId, 1, parentTxId, '.bsvignore', this.state.bsvignoreData);
-    const bsvpushTx = await Metanet.fileTx(this.state.masterKey, 'm/0/1', parentTxId, 2, parentTxId, 'bsvpush.json', this.state.bsvpushData);
+    const rootKey = this.state.masterKey.deriveChild('m/0');
+    const rootAddress = rootKey.publicKey.toAddress().toString();
+    const rootNode = new MetanetNode();
+    rootNode.nodeAddress = rootAddress;
+    rootNode.nodeTxId = fundingTxId;
+
+    const bsvignoreNode = new MetanetNode();
+    bsvignoreNode.derivationPath = 'm/0/0';
+    bsvignoreNode.name = '.bsvignore';
+    bsvignoreNode.parentTxId = fundingTxId;
+
+    const bsvpushNode = new MetanetNode();
+    bsvpushNode.derivationPath = 'm/0/1';
+    bsvpushNode.name = 'bsvpush.json';
+    bsvpushNode.parentTxId = fundingTxId;
+
+    const bsvignoreTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, rootNode, bsvignoreNode, this.state.bsvignoreData);
+    const bsvpushTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, rootNode, bsvpushNode, this.state.bsvpushData);
 
     console.log(`Sending .bsvignore transaction: ${bsvignoreTx.id}`);
     await Metanet.send(bsvignoreTx);
     console.log(`Sending .bsvpush transaction: ${bsvpushTx.id}`);
     await Metanet.send(bsvpushTx);
 
-    console.log(`Repo created, view here https://codeonchain.network?tx=${parentTxId}`);   
-    this.setState({message: `Repo created, view here https://codeonchain.network?tx=${parentTxId}`});   
+    console.log(`Repo created, view here https://codeonchain.network?tx=${fundingTxId}`);   
+    this.setState({message: `Repo created, view here https://codeonchain.network?tx=${fundingTxId}`});   
   }
 
   onError(arg: any) {
