@@ -1,5 +1,5 @@
 
-#new-repo-overlay {
+#overlay {
   position: fixed;
   background-color: rgba(0, 0, 0, 0.26);
   width: 100%;
@@ -12,7 +12,7 @@
   cursor: pointer;
 }
 
-#new-repo-dialog {
+#dialog {
   box-sizing: border-box;
   width: var(--width);
   max-width: 100%;
@@ -23,14 +23,24 @@
   box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.26);
 }
 
-#new-repo-dialog table {
-  width: auto;
-  border: none;
-  margin-left: 0px;
+.form-grid {
+  display: grid;
+  grid-template-columns: 20% 80%;
+  grid-template-rows: auto;
+  grid-column-gap: 15px;
+  grid-row-gap: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  justify-content: center;
 }
 
-#new-repo-dialog tr:hover {
-  background: none;
+.label {
+  text-align: right;
+  font-weight: bold;
+}
+
+input {
+  padding: 5px;
 }
 
 #dialog-buttons {
@@ -59,10 +69,32 @@ td {
 /*  vertical-align: middle;*/
 }
 
+#buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#dialog-money-button-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+#money-button-encapsulator {
+  width: 150px;
+}
+
 #new-repo-money-button {
   margin: auto;
 }
-
+/*
 .checkbox-input {
   vertical-align: text-bottom;
+}
+*/
+
+#buttons {
+  margin-top: 20px;
 }

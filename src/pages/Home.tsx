@@ -42,7 +42,6 @@ class Home extends React.Component {
 
     return (
       <>
-
         <IonContent className="ion-padding">
           <Banner />
           <ReposTabs />
@@ -72,6 +71,9 @@ const ReposTabs: React.FunctionComponent = () => {
       </div>
       <div id="recent-tab" className='tab'>
         <a href='/recent'>Recent</a>
+      </div>
+      <div id="my-repos-tab" className='tab'>
+        <a href='/my-repos'>My Repos</a>
       </div>
     </div>
   );

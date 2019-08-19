@@ -5,18 +5,22 @@ import React from "react";
 import bsv from 'bsv';
 import MoneyButton from '@moneybutton/react-money-button';
 
-import './NewRepoModal.css';
+import './Modal.css';
+import './AddFilesModal.css';
 import '../theme/variables.scss';
 import { Metanet } from "../metanet/metanet";
 import { FileTree } from "../metanet/FileTree"; 
-import { IonButton, IonIcon } from "@ionic/react";
+import { FileTreeViewer } from './FileTreeViewer';
+import { IonButton, IonIcon, IonProgressBar } from "@ionic/react";
 import { MetanetNode } from "../metanet/metanet_node";
-import { cloud } from "ionicons/icons";
+import { cloudUpload } from "ionicons/icons";
+import { MasterKeyStorage } from "../storage/MasterKeyStorage";
 
 interface AddFilesProps {
   isOpen: boolean;
   onClose: Function;
   parent: MetanetNode;
+  fileTrees: FileTree[];
 }
 
 class AddFilesModal extends React.Component<AddFilesProps> {
@@ -28,11 +32,46 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     moneyButtonDisabled: true,
     moneyButtonProps: {} as any,
 
-    message: ''
+    message: '',
+
+    dragHighlight: false,
+
+    fileTrees: this.props.fileTrees,
+
+    progressBarValue: 0,
+    progressBarIndeterminate: false
   }
 
   fileInput: HTMLInputElement | null = null;
-  fileTrees: FileTree[] = [];
+
+  currentFileIndex = 0;
+  maxFiles = 0;
+
+  componentDidUpdate(prevProps: AddFilesProps) {
+    // Check if there is an existing master key each time modal is opened
+    if (this.props.isOpen && !prevProps.isOpen) {
+      const masterKeyEntry = MasterKeyStorage.getMasterKey(this.props.parent.nodeAddress);
+
+      if (masterKeyEntry) {
+        this.setState({xprivkey: masterKeyEntry.masterKey});
+      } else {
+        console.log('MasterKey entry not found in local storage');
+      }
+
+      this.setState({fileTrees: this.props.fileTrees});
+
+      if (this.props.fileTrees.length > 0) {
+        this.setState({addFilesButtonDisabled: false});
+      }
+
+      this.setState({
+        moneyButtonDisabled: true,
+        message: '',
+        progressBarValue: 0,
+        progressBarIndeterminate: false
+      });
+    }
+  }
 
   render() {
     if (!this.props.isOpen) {
@@ -40,29 +79,33 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     }
 
     return (
-      <div id="new-repo-overlay" onClick={() => this.props.onClose()}>
-        <div id="new-repo-dialog" onClick={(e) => {e.stopPropagation()}}>
-          <h2>Add Files</h2>
+      <div id="overlay" onClick={() => this.props.onClose()}>
+        <div id="dialog" onClick={(e) => {e.stopPropagation()}}>
+          <h2 style={{marginTop: 0}}>Add Files</h2>
           <hr />
-          <table>
-            <tbody>
-              <tr>
-                <td>Master key: </td>
-                <td><input type='text' id='repo-master-key' onChange={(e) => this.onMasterKeyChanged(e)} size={64} placeholder='Enter the master key for this repository' /></td>
-              </tr>    
-            </tbody>
-          </table>
-          <div id='file-selection-container'>
-            <div id='file-drop-area'>
-              <IonIcon icon={cloud} size='large' />
-              <p>Drop files here</p>
-            </div>
-            <div id='select-files-button-container'>
-              <IonButton onClick={() => {this.onSelectFilesButton()}}>Select Files...</IonButton>
-              <input ref={ref => this.setFileInputRef(ref)} onChange={(e) => this.onFilesSelected(e)} id='hidden-file-input' type='file' multiple />
+          <div className='form-grid'>
+                <div className='label'>Master key: </div>
+                <div><input type='text' id='repo-master-key' value={this.state.xprivkey} onChange={(e) => this.onMasterKeyChanged(e)} size={64} placeholder='Enter the master key for this repository' /></div>
+          </div>
+          <div className='file-selection-container'>
+            <div className={`file-drop-area ${this.state.dragHighlight ? 'drag-highlight': ''}`} onDragOver={(e) => this.onDragOver(e)} onDragLeave={() => this.onDragLeave()} onDrop={(e) => this.onDrop(e)}>
+              <IonIcon icon={cloudUpload} color='medium' size='large' />
+              <p id='drop-files-message'>Drop files here</p>
+              <div id='select-files-button-container'>
+                <IonButton onClick={() => {this.onSelectFilesButton()}}>Select Files...</IonButton>
+                <input ref={ref => this.setFileInputRef(ref)} onChange={(e) => this.onFilesSelected(e)} id='hidden-file-input' type='file' multiple />
+              </div>
+              {this.state.fileTrees.length > 0 &&
+              <p id='file-count'>
+                {this.countFiles(this.state.fileTrees)} file(s) selected
+              </p>}
             </div>
           </div>
-          <div id='new-repo-money-button-container'>
+          {this.state.fileTrees.length > 0 &&
+          <div className='file-trees-container'>
+            <FileTreeViewer fileTrees={this.state.fileTrees} />
+          </div>}
+          <div id='buttons'>
             <div>
               <IonButton onClick={() => this.props.onClose()} >Close</IonButton>
               <IonButton onClick={() => this.onAddFilesButton()} disabled={this.state.addFilesButtonDisabled} color='success' >Add Files</IonButton>
@@ -70,11 +113,11 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
             {!this.state.moneyButtonDisabled && 
               (
-                <div>
+                <div id='dialog-money-button-container'>
                   <p>
                     Swipe Money Button to upload files:
                   </p>
-                  <div>
+                  <div id='money-button-encapsulator'>
                     <MoneyButton 
                       disabled={this.state.moneyButtonDisabled}
                       label='Create'
@@ -89,9 +132,12 @@ class AddFilesModal extends React.Component<AddFilesProps> {
                 </div>
               )
             }
+            {this.state.message &&
             <p>
               {this.state.message}
-            </p>
+            </p>}
+            {(this.state.progressBarValue > 0 || this.state.progressBarIndeterminate) &&
+            <IonProgressBar value={this.state.progressBarValue} type={this.state.progressBarIndeterminate ? 'indeterminate' : 'determinate'}/>}
           </div>
         </div>
       </div>
@@ -120,8 +166,37 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     this.setState({xprivkey: e.target.value});
     this.setState({moneyButtonDisabled: true});
 
-    if (e.target.value && this.fileInput && this.fileInput.files) {
+    if (e.target.value && this.state.fileTrees.length > 0) {
       this.setState({addFilesButtonDisabled: false});
+    }
+  }
+
+  onDragEnter() {
+    this.setState({dragHighlight: true});
+  }
+
+  onDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    this.setState({dragHighlight: true});
+  }
+
+  onDragLeave() {
+    this.setState({dragHighlight: false});
+  }
+
+  async onDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    e.preventDefault();
+    this.setState({dragHighlight: false});
+    if (e.dataTransfer.items) {
+      const fileTrees = await AddFilesModal.itemListToFileTrees(e.dataTransfer.items);
+      this.setState({
+        fileTrees: fileTrees,
+        moneyButtonDisabled: true
+      });
+      if (this.state.xprivkey) {
+        this.setState({addFilesButtonDisabled: false});
+      }
     }
   }
 
@@ -135,17 +210,70 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     console.log(e.target.files);
 
     if (this.state.xprivkey && this.fileInput && this.fileInput.files) {
-      this.setState({addFilesButtonDisabled: false});
+      this.setState({
+        fileTrees: this.fileListToFileTrees(this.fileInput.files),
+        moneyButtonDisabled: true
+      });
+      if (this.state.xprivkey) {
+        this.setState({addFilesButtonDisabled: false});
+      }
     }
   }
 
   onAddFilesButton() {
     if (this.fileInput && this.fileInput.files) {
       this.setState({addFilesButtonDisabled: true});
-      this.fileTrees = this.fileListToFileTrees(this.fileInput.files);
-      this.generateOutputs(this.fileTrees);
+      
+      this.generateOutputs(this.state.fileTrees);
+    }
+  }
+
+  static async itemListToFileTrees(itemList: DataTransferItemList): Promise<FileTree[]> {
+    // Convert to array
+    const entries = [] as any[];
+    const fileTrees = [] as FileTree[];
+
+    for (let i = 0; i < itemList.length; i++) {
+      entries.push(itemList[i].webkitGetAsEntry());
     }
 
+    for (const entry of entries) {
+      fileTrees.push(await this.entryToFileTree(entry));
+    }
+
+    return fileTrees;
+  }
+
+  static async entryToFileTree(entry: any): Promise<FileTree> {
+    let file = null;
+    if (entry.isFile) {
+      file = await this.getEntryFile(entry);
+    }
+
+    const fileTree = new FileTree(entry.name, file);
+
+    if (entry.isDirectory) {
+      const directoryReader = entry.createReader();
+
+      const entries = await this.readEntries(directoryReader);
+      for (const childEntry of entries) {
+          fileTree.children.push(await this.entryToFileTree(childEntry));
+      }
+    }
+
+    return fileTree;
+  }
+
+  static async readEntries(directoryReader: any): Promise<any[]> {
+    return new Promise<any[]>(resolve => {
+      directoryReader.readEntries((entries: any[]) => resolve(entries));
+    });
+  }
+
+  static async getEntryFile(entry: any): Promise<File> {
+    return new Promise<File>(resolve => {
+      entry.file((file: File) => resolve(file))
+    });
   }
 
   /**
@@ -163,13 +291,16 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       }
 
       files.forEach((file: any) => {
+        //console.log('File', file);
         const path = file.webkitRelativePath as string;
         if (path) {
           const pathComponents = path.split('/');
           let children = fileTrees;
           pathComponents.forEach((pc, i) => {
+            //console.log(`pc: ${pc}`);
             let f = children.find(c => c.name === pc);
             if (!f) {
+              //console.log(`Creating FileTree for ${pc}`);
               f = new FileTree(pc, i === pathComponents.length - 1 ? file : null);
               children.push(f);
             }
@@ -179,6 +310,10 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       });
 
       return fileTrees;
+  }
+
+  countFiles(fileTrees: FileTree[]) {
+    return fileTrees.length === 0 ? 0 : fileTrees.map(fileTree => fileTree.fileCount()).reduce((sum, count) => sum + count);
   }
 
   async generateOutputs(fileTrees: FileTree[]) {
@@ -191,7 +326,9 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       // so that the .bsvignore and bsvpush.json files can be created
       const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
 
-      this.setState({message: 'Estimating fee...'});
+      this.setState({message: 'Estimating fees...'});
+      this.currentFileIndex = 1;
+      this.maxFiles = this.countFiles(fileTrees);
 
       const fee = await Metanet.estimateFileTreesFee(masterKey, this.props.parent, fileTrees, (name: string) => this.onEstimateFeeStatus(name));
 
@@ -201,17 +338,22 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
       this.generateFundingOutputs(outputs, masterKey, this.props.parent, fileTrees);
 
+      console.log('Parent node: ', this.props.parent);
       console.log('Money Button outputs', outputs);
       moneyButtonDisabled = false;
       moneyButtonProps.outputs = outputs;
     } else {
       this.setState({message: 'No master key!'});
     }
-    this.setState({moneyButtonDisabled, moneyButtonProps, message: ''});
+    this.setState({moneyButtonDisabled, moneyButtonProps, message: '', progressBarValue: 0});
   }
 
   onEstimateFeeStatus(name: string) {
-    this.setState({message: `Estimating fee for file: ${name}...`});
+    this.currentFileIndex++;
+    this.setState({
+      message: `Estimating fees: ${this.currentFileIndex} of ${this.maxFiles}`,
+      progressBarValue: this.currentFileIndex / this.maxFiles
+    });
   }
 
   /**
@@ -237,20 +379,57 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     }
   }
 
+  /**
+   * Once the MoneyButton payment has been made we can begin to send the files.
+   * @param arg 
+   */
   async onPayment(arg: any) {
     console.log('on payment');
     const fundingTxId = arg.txid;
     console.log('funding txid: ' + fundingTxId);
+
+    // Hide the moneybutton
+    this.setState({moneyButtonDisabled: true});
+
+    await this.sendFiles(fundingTxId);
+  }
+
+  /**
+   * First wait for the funding tx to be confirmed (if necessary) then send file txs.
+   * @param fundingTxId 
+   */
+  async sendFiles(fundingTxId: string) {
     const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
 
-    await Metanet.sendFileTrees(masterKey, fundingTxId, 0, this.props.parent, this.fileTrees, (name: string) => {this.onSendFilesCallback(name)});
+    this.setState({message: 'Sending files...'});
+    this.currentFileIndex = 1;
+    this.maxFiles = this.countFiles(this.state.fileTrees);
 
-    console.log(`Files added`); 
-    this.setState({message: `Files added`});
+    try {
+      this.setState({progressBarIndeterminate: true});
+      await Metanet.waitForUnconfirmedParents(fundingTxId, (message: string) => this.onWaitForUnconfirmedParentsCallback(message));
+      this.setState({progressBarIndeterminate: false});
+      await Metanet.sendFileTrees(masterKey, fundingTxId, 0, this.props.parent, this.state.fileTrees, (name: string) => this.onSendFilesCallback(name));
+      console.log(`Files added`); 
+      this.setState({message: `Files added, reloading page...`});
+      window.location.reload(false);
+    } catch (error) {
+      console.log('Error sending files', error); 
+      this.setState({message: `Error: ${error}`});
+      this.setState({progressBarIndeterminate: false});
+    }
+  }
+
+  onWaitForUnconfirmedParentsCallback(message: string) {
+    this.setState({message: message});
   }
 
   onSendFilesCallback(name: string) {
-    this.setState({message: `Sending file: ${name}...`});
+    this.currentFileIndex++;
+    this.setState({
+      message: `Sending file: ${name}...`,
+      progressBarValue: this.currentFileIndex / this.maxFiles
+    });
   }
 
   onError(arg: any) {

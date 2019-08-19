@@ -60,6 +60,8 @@ export class Metanet {
         },
         "project": {
           "tx.h": 1,
+          "out.s3": 1,  // Node address
+          "out.s4": 1,  // Parent txId
           "out.s6": 1,  // File protocol
           "out.s10": 1, // File name
           "out.s13": 1  // Derivation path
@@ -78,8 +80,10 @@ export class Metanet {
         },
         "project": {
           "tx.h": 1,
+          "out.s3": 1,  // Node address
+          "out.s4": 1,  // Parent txId
           "out.s6": 1,  // Directory protocol
-          "out.s7": 1, // Directory name
+          "out.s7": 1,  // Directory name
           "out.s10": 1  // Derivation path
         }
       }
@@ -90,7 +94,7 @@ export class Metanet {
     const url = PLANARIA_ENDPOINT + btoa(JSON.stringify(query));
     const response = await fetch(url, { headers: { key: '1DzNX2LzKrmoyYVyqMG46LLknzSd7TUYYP' } });
     const json = await response.json();
-    console.log(json);
+    //console.log(json);
     const children = [];
 
     const items = json.u.concat(json.c);
@@ -193,16 +197,14 @@ export class Metanet {
         // Read in data
         const arrayBuffer = await readAsArrayBuffer(fileTree.file);
         const buffer = Buffer.from(arrayBuffer);
-        const fileTx = await this.fileDummyTx(masterKey, parent, metanetNode, buffer);
-        metanetNode.fee = this.estimateFee(fileTx);
+        await this.fileDummyTx(masterKey, parent, metanetNode, buffer);
         fee += metanetNode.fee;
         console.log(`file fee: ${metanetNode.fee}`);
       } else {
         // Estimate fee for directory
 
         // Directory tx
-        const folderTx = await this.folderDummyTx(masterKey, parent, metanetNode);
-        metanetNode.fee = this.estimateFee(folderTx);
+        await this.folderDummyTx(masterKey, parent, metanetNode);
         fee += metanetNode.fee;
         console.log(`folder fee: ${metanetNode.fee}`);
 
@@ -251,6 +253,11 @@ export class Metanet {
     const parentKey = masterKey.deriveChild(parent.derivationPath);
     const nodeAddress = masterKey.deriveChild(metanetNode.derivationPath).publicKey.toAddress().toString();
 
+    // If the node doesn't have a parent tx id yet give it a fake one to ensure fee estimation is accurate
+    if (!metanetNode.parentTxId) {
+      metanetNode.parentTxId = '0'.repeat(64);
+    }
+
     const opReturnPayload = [
       ...MetanetProtocol.from(nodeAddress, metanetNode.parentTxId), '|',
       ...payload, '|',
@@ -270,6 +277,7 @@ export class Metanet {
         console.log(`Waiting for UTXO for key: ${parent.nodeAddress}, txid: ${fundingTxId}, fee: ${metanetNode.fee}`);
         await this.sleep(1000);
       }
+      console.log(`Using utxo with vout: ${utxo.vout} from address: ${parent.nodeAddress}`);
     } else {
       // If no funding tx id was provided then we are just creating a dummy tx for estimating fee
       utxo = this.dummyUtxo();
@@ -279,9 +287,9 @@ export class Metanet {
 
     const tx = new bsv.Transaction().from(utxos);
     tx.addOutput(new bsv.Transaction.Output({ script: script.toString(), satoshis: 0 }));
-    const fee = this.estimateFee(tx);
+    metanetNode.fee = this.estimateFee(tx);
     //console.log(`fee = ${fee}, name = ${fileName}`);
-    tx.fee(fee);
+    tx.fee(metanetNode.fee);
     tx.sign(parentKey.privateKey);
     return tx;
   }
@@ -338,26 +346,28 @@ export class Metanet {
   }
 
   static estimateFee(tx: any): number {
-    //console.log(tx);
     return Math.max(tx._estimateFee(), MIN_OUTPUT_VALUE);
   }
 
-  static async findUtxoByVout(publicKey: any, txId: string, voutIndex: number): Promise<any[]> {
+  static async findUtxoByVout(publicKey: any, txId: string, voutIndex: number): Promise<any> {
     const utxos = await this.bitindex.address.getUtxos(publicKey);
     return utxos.find((utxo: any) => utxo.txid === txId && utxo.vout === voutIndex);
   }
 
-  static async findUtxoByFee(parent: MetanetNode, txId: string, fee: number): Promise<any[]> {
+  static async findUtxoByFee(parent: MetanetNode, txId: string, fee: number): Promise<any> {
     const utxos = await this.bitindex.address.getUtxos(parent.nodeAddress);
     const utxo = utxos.find((utxo: any) => utxo.txid === txId && utxo.satoshis === fee && !parent.spentVouts.includes(utxo.vout));
-    parent.spentVouts.push(utxo.vout);
+    if (utxo) {
+      parent.spentVouts.push(utxo.vout);
+    }
     return utxo;
   }
 
   static async send(tx: any) {
     let response = await Metanet.bitindex.tx.send(tx.toString());
     if (!response.txid) {
-      throw new Error(response);
+      console.log(response);
+      throw new Error(JSON.stringify(response, null, 2));
     }
     return response;
   }
@@ -374,10 +384,62 @@ export class Metanet {
     return metanetNode.nodeAddress === derivedAddress;
   }
 
+  /**
+   * Bitcoin has a maximum mempool chain of 25 unconfirmed parent transactions.
+   * Get all unconfirmed transactions for the funding address and ensure that the
+   * total outputs that are unconfirmed are below 25.
+   * @param fundingTxId
+   */
+  static async waitForUnconfirmedParents(fundingTxId: string, statusCallback: Function) {
+    await this.waitForFundingTransactionToAppear(fundingTxId);
+
+    while (await this.memPoolChainLength(fundingTxId) >= 25) {
+      const message = `Waiting for unconfirmed parents (Bitcoin has a maximum of 25 unconfirmed parents), this could take 10 minutes or longer... 
+Do not refresh or close the window as the files have not been uploaded yet.
+This has occurred either because more than 25 files are being uploaded, or previous Money Button transactions have yet to be confirmed.
+The Money Button transaction is: ${fundingTxId}`;
+      console.log(message);
+      statusCallback(message);
+  
+      await this.sleep(2000);
+    }
+  }
+
+  /**
+   * Wait for funding TX to appear before checking unconfirmed parents.
+   * @param fundingTx
+   */
+  static async waitForFundingTransactionToAppear(fundingTxId: string) {
+    console.log(`Waiting for funding transaction to appear on network... (tx id: ${fundingTxId})`);
+    while (!(await this.bitindex.tx.get(fundingTxId)).txid) {
+      await this.sleep(1000);
+    }
+  }
+
+  /**
+   * Walk through tx inputs recursively counting outputs of unconfirmed txs
+   * until confirmed tx reached.
+   * @param txId 
+   */
+  static async memPoolChainLength(txId: string): Promise<number> {
+    let chainLength = 0;
+    const result = await this.bitindex.tx.get(txId);
+
+    if (result.confirmations === 0) {
+      chainLength += result.vout.length;
+
+      // Check inputs
+      for (const vin of result.vin) {
+        chainLength += await this.memPoolChainLength(vin.txid);
+      }
+    }
+
+    return chainLength;
+  }
+
   static async sleep(ms: number) {
     return new Promise(resolve => {
         setTimeout(resolve, ms);
     });
   }
-
 }

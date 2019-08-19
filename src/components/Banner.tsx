@@ -13,6 +13,16 @@ const Banner: React.FunctionComponent = () => {
     setNewRepOpen(true);
   }
 
+  function search(e: KeyboardEvent) {
+    if (e.keyCode === 13) {
+      e.preventDefault();
+      const value = (e.target as HTMLInputElement).value;
+      if (value.length === 64) {
+        window.location.href = `/tx/${(e.target as HTMLInputElement).value}`;
+      }
+    }
+  }
+
   return (
     <>
       <div id='banner'>
@@ -24,7 +34,7 @@ const Banner: React.FunctionComponent = () => {
           <IonButton id="new-repo-btn" color="success" onClick={newRepository}>+ New Repository</IonButton>
         </div>
         <div id='search-container'>
-          <IonSearchbar placeholder="Transaction ID" mode="ios"/>
+          <IonSearchbar onKeyUp={search} placeholder="Transaction ID" mode="ios"/>
         </div>
       </div>
       <NewRepoModal isOpen={newRepoOpen} onClose={() => {setNewRepOpen(false)}}/>

@@ -17,6 +17,7 @@ import { Repo } from '../metanet/repo';
 import Banner from '../components/Banner';
 import AddFilesModal from '../components/AddFilesModal';
 import NewFolderModal from '../components/NewFolderModal';
+import { FileTree } from '../metanet/FileTree';
 
 interface MatchParams {
   txId: string;
@@ -31,6 +32,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     repo: null as (Repo | null),
     newFolderModalOpen: false,
     addFilesModalOpen: false,
+    fileTrees: [] as FileTree[]
   };
 
   render() {
@@ -44,12 +46,12 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
             <NodeBanner metanetNode={metanetNode} repo={this.state.repo} />
             <Clone metanetNode={metanetNode} />
             {this.state.children.length > 0 &&
-            <Children children={this.state.children} />}
+            <Children children={this.state.children} onFilesDropped={(items: any) => this.onFilesDropped(items)}/>}
             {this.state.metanetNode.isDirectory() &&
             <DirectoryButtons onNewFolderButton={() => this.onNewFolderButton()} onAddFilesButton={() => this.onAddFilesButton()}/>}
             <Readme text={this.state.readme} />
             <FileData metanetNode={metanetNode} data={this.state.fileData} />
-            <AddFilesModal isOpen={this.state.addFilesModalOpen} onClose={() => {this.addFilesModalClosed()}} parent={metanetNode} />
+            <AddFilesModal isOpen={this.state.addFilesModalOpen} onClose={() => {this.addFilesModalClosed()}} parent={metanetNode} fileTrees={this.state.fileTrees} />
             <NewFolderModal isOpen={this.state.newFolderModalOpen} onClose={() => {this.newFolderModalClosed()}} parent={metanetNode} />
           </div>
         </IonContent>
@@ -130,12 +132,10 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
   }
 
   onNewFolderButton() {
-    console.log('New folder button');
     this.setState({newFolderModalOpen: true});
   }
 
   onAddFilesButton() {
-    console.log('Add files button');
     this.setState({addFilesModalOpen: true});
   }
 
@@ -145,6 +145,14 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
 
   addFilesModalClosed() {
     this.setState({addFilesModalOpen: false});
+  }
+
+  async onFilesDropped(items: any) {
+    const fileTrees = await AddFilesModal.itemListToFileTrees(items);
+    this.setState({
+      fileTrees: fileTrees,
+      addFilesModalOpen: true
+    });
   }
 }
 
@@ -188,31 +196,37 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo}) => {
 
 interface ChildrenProps extends RouteComponentProps {
   children: MetanetNode[];
+  onFilesDropped: Function;
 }
-const Children = withRouter<ChildrenProps>(({children}) => {
+const Children = withRouter<ChildrenProps>(({children, onFilesDropped}) => {
 
   const [highlight, setHighlight] = useState(false);
 
   function onDragEnter(e: React.DragEvent<HTMLDivElement>) {
     e.stopPropagation();
     e.preventDefault();
-    console.log('onDragEnter');
+    setHighlight(true);
+  }
+
+  function onDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    e.preventDefault();
     setHighlight(true);
   }
 
   function onDragLeave(e: React.DragEvent<HTMLDivElement>) {
     e.stopPropagation();
     e.preventDefault();
-    console.log('onDragLeave');
     setHighlight(false);
   }
 
-  function onDrop(e: React.DragEvent<HTMLDivElement>) {
+  async function onDrop(e: React.DragEvent<HTMLDivElement>) {
     e.stopPropagation();
     e.preventDefault();
-    console.log('onDrop');
-    console.log(e.dataTransfer.files);
     setHighlight(false);
+    if (e.dataTransfer.items) {
+      onFilesDropped(e.dataTransfer.items);
+    }
   }
 
   const rows = children.map((child, index) => {
@@ -226,7 +240,7 @@ const Children = withRouter<ChildrenProps>(({children}) => {
   });
 
   return (
-    <div id='children-container' className={highlight ? 'children-drag-highlight' : ''} onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDrop={onDrop}>
+    <div id='children-container' className={highlight ? 'children-drag-highlight' : ''} onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDragOver={onDragOver} onDrop={onDrop}>
       <IonGrid fixed>
         {rows}
       </IonGrid>

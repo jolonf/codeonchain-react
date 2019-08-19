@@ -5,11 +5,12 @@ import React from "react";
 import bsv from 'bsv';
 import MoneyButton from '@moneybutton/react-money-button';
 
-import './NewRepoModal.css';
+import './Modal.css';
 import '../theme/variables.scss';
 import { Metanet } from "../metanet/metanet";
 import { IonButton } from "@ionic/react";
 import { MetanetNode } from "../metanet/metanet_node";
+import { MasterKeyStorage } from "../storage/MasterKeyStorage";
 
 interface NewFolderProps {
   isOpen: boolean;
@@ -29,29 +30,37 @@ class NewFolderModal extends React.Component<NewFolderProps> {
     message: ''
   }
 
+  componentDidUpdate(prevProps: NewFolderProps) {
+    // Check if there is an existing master key each time modal is opened
+    if (this.props.isOpen && !prevProps.isOpen) {
+      const masterKeyEntry = MasterKeyStorage.getMasterKey(this.props.parent.nodeAddress);
+
+      if (masterKeyEntry) {
+        this.setState({xprivkey: masterKeyEntry.masterKey});
+      } else {
+        console.log('MasterKey entry not found in local storage');
+      }
+    }
+  }
+
   render() {
     if (!this.props.isOpen) {
       return null;
     }
 
     return (
-      <div id="new-repo-overlay" onClick={() => this.props.onClose()}>
-        <div id="new-repo-dialog" onClick={(e) => {e.stopPropagation()}}>
-          <h2>New Folder</h2>
+      <div id="overlay" onClick={() => this.props.onClose()}>
+        <div id="dialog" onClick={(e) => {e.stopPropagation()}}>
+          <h2 style={{marginTop: 0}}>New Folder</h2>
           <hr />
-          <table>
-            <tbody>
-              <tr>
-                <td>Master key: </td>
-                <td><input type='text' id='repo-master-key' onChange={(e) => this.onMasterKeyChanged(e)} size={64} placeholder='Enter the master key for this repository' /></td>
-              </tr>    
-              <tr>
-                <td>Name: </td>
-                <td><input type='text' id='repo-name' onChange={(e) => this.onFolderNameChanged(e)} required placeholder='Folder name (Required)' size={80} /></td>
-              </tr>
-            </tbody>
-          </table>
-          <div id='new-repo-money-button-container'>
+          <div className='form-grid'>
+                <div className='label'>Master key: </div>
+                <div><input type='text' id='repo-master-key' value={this.state.xprivkey} onChange={(e) => this.onMasterKeyChanged(e)} size={64} placeholder='Enter the master key for this repository' /></div>
+
+                <div className='label'>Name: </div>
+                <div><input type='text' id='repo-name' onChange={(e) => this.onFolderNameChanged(e)} required placeholder='Folder name (Required)' size={80} /></div>
+          </div>
+          <div id='buttons'>
             <div>
               <IonButton onClick={() => this.props.onClose()} >Close</IonButton>
               <IonButton onClick={() => this.generateOutputs()} color='success'>Create Folder</IonButton>
@@ -59,11 +68,11 @@ class NewFolderModal extends React.Component<NewFolderProps> {
 
             {!this.state.moneyButtonDisabled && 
               (
-                <div>
+                <div id='dialog-money-button-container'>
                   <p>
                     Swipe Money Button to create folder:
                   </p>
-                  <div>
+                  <div id='money-button-encapsulator'>
                     <MoneyButton 
                       disabled={this.state.moneyButtonDisabled}
                       label='Create'
@@ -78,9 +87,10 @@ class NewFolderModal extends React.Component<NewFolderProps> {
                 </div>
               )
             }
+            {this.state.message &&
             <p>
               {this.state.message}
-            </p>
+            </p>}
           </div>
         </div>
       </div>
@@ -104,7 +114,6 @@ class NewFolderModal extends React.Component<NewFolderProps> {
     this.setState({folderName: e.target.value});
     this.setState({moneyButtonDisabled: true});
   }
-
 
   async generateOutputs() {
     console.log('generate outputs');

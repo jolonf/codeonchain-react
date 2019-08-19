@@ -1,0 +1,43 @@
+.file-selection-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.file-drop-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px dashed lightgrey;
+  border-radius: 20px;
+  padding: 20px;
+  width: 90%;
+}
+
+#hidden-file-input {
+  display: none;
+}
+
+#drop-files-message {
+  color: grey;
+}
+
+#file-count {
+  color: grey;
+}
+
+.drag-highlight {
+  background-color: lightgrey;
+}
+
+.file-trees-container {
+  width: 90%;
+  max-height: 200px;
+  overflow: auto;
+  margin: auto;
+  margin-top: 20px;
+  padding: 15px;
+  padding-top: 5px;
+  border: 1px solid lightgrey;
+  background-color: rgb(238, 238, 238);
+}

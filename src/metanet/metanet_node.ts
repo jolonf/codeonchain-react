@@ -19,6 +19,14 @@ export class MetanetNode {
 
   spentVouts = [] as number[];
 
+  constructor(masterKey: any | null = null, derivationPath: string = '', name = '') {
+    if (masterKey && derivationPath) {
+      this.derivationPath = derivationPath;
+      this.nodeAddress = masterKey.deriveChild(derivationPath).publicKey.toAddress().toString();
+      this.name = name;
+    }
+  }
+
   isDirectory(): boolean {
     return this.protocol === DirectoryProtocol.address;
   }
