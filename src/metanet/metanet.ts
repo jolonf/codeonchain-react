@@ -47,7 +47,7 @@ export class Metanet {
       this.getChildDirectories(txId)
     ]);
 
-    return results[0].concat(results[1]);
+    return results[0].concat(results[1]).sort((a, b) => a.name < b.name ? -1 : 1);
   }
 
   static async getChildFiles(txId: string): Promise<MetanetNode[]> {
@@ -437,9 +437,24 @@ The Money Button transaction is: ${fundingTxId}`;
     return chainLength;
   }
 
+  /**
+   * Returns the funds remaining in an address in sats.
+   * @param address 
+   */
+  static async addressBalance(address: string): Promise<number> {
+    const response = await this.bitindex.address.getStatus(address);
+    if (response.balanceSat !== undefined) {
+      return response.balanceSat + response.unconfirmedBalanceSat;
+    } else {
+      console.log(response);
+      throw new Error(JSON.stringify(response, null, 2));
+    }
+  }
+
   static async sleep(ms: number) {
     return new Promise(resolve => {
         setTimeout(resolve, ms);
     });
   }
+
 }

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import NewRepoModal from './NewRepoModal';
 import './Banner.css';
 import '../theme/variables.scss';
+import { Link } from 'react-router-dom';
 
 const Banner: React.FunctionComponent = () => {
 
@@ -46,9 +47,9 @@ const Logo: React.FunctionComponent = () => {
   return ( 
     <>
       <span id='title'>
-        <a id="title" href="/">
+        <Link id="title" to="/">
           <span className='code'>Code</span><span className='on'>on</span><span className='chain'>chain</span>
-        </a>
+        </Link>
       </span>
     </>
   );

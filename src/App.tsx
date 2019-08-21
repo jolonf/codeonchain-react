@@ -26,8 +26,8 @@ const App: React.FunctionComponent = () => (
     <IonReactRouter>
       <IonPage>
         <IonRouterOutlet>
-          <Route exact path="/" component={Home} />
-          <Route exact path="/tx/:txId" component={NodePage} />
+          <Route path="/tx/:txId" component={NodePage} />
+          <Route path="/" component={Home} />
         </IonRouterOutlet>
       </IonPage>
     </IonReactRouter>

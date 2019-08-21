@@ -1,15 +1,21 @@
 import './Home.css';
 
-import { IonContent, IonGrid, IonRow, IonCol } from '@ionic/react';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { IonContent, IonGrid, IonRow, IonCol, IonButton, IonTextarea } from '@ionic/react';
+import { RoutedTabs, NavTab } from 'react-router-tabs';
+
 
 import MoneyButton from '@moneybutton/react-money-button';
 
 import { Repos } from '../metanet/repos';
 import { Repo } from '../metanet/repo';
 import Banner from '../components/Banner';
+import { Switch, Route, RouteComponentProps, withRouter } from 'react-router';
+import { MasterKeyStorage, MasterKeyEntry } from '../storage/MasterKeyStorage';
+import { Link } from 'react-router-dom';
+import Modal from '../components/Modal';
 
-class Home extends React.Component {
+class Home extends React.Component<RouteComponentProps> {
   featuredTransactions = [
     '4bec3dc8e12fce17315084e01affd0b607fa11a857ecf7eed09caee06d74481d', // bitcoin-sv
     '21a58fae8d01df0b33f34e82e1ef30e49ad474e91890e027e926f88af15b9939', // bsvpush
@@ -45,6 +51,12 @@ class Home extends React.Component {
         <IonContent className="ion-padding">
           <Banner />
           <ReposTabs />
+          <Switch>
+
+            <Route path='/featured-repos' component={FeaturedRepos}/>
+            <Route path='/recent-repos' component={RecentRepos}/>
+            <Route path='/' component={MyRepos}/>
+          </Switch>
           <IonGrid fixed>
             {rows}
           </IonGrid>
@@ -63,19 +75,102 @@ class Home extends React.Component {
   }
 };
 
-const ReposTabs: React.FunctionComponent = () => {
+const ReposTabs = () => {
   return (
-    <div id="repos-tabs">
-      <div id="featured-tab" className='tab tab-selected'>
-        <a href='/'>Featured</a>
+    <>
+      <div id="repos-tabs">
+        <RoutedTabs 
+            tabClassName='tab'
+            activeTabClassName='tab-selected'>
+          <NavTab to='/' exact>My Repos</NavTab>
+          <NavTab to='/featured-repos'>Featured</NavTab>
+          <NavTab to='/recent-repos'>Recent</NavTab>
+        </RoutedTabs>
       </div>
-      <div id="recent-tab" className='tab'>
-        <a href='/recent'>Recent</a>
-      </div>
-      <div id="my-repos-tab" className='tab'>
-        <a href='/my-repos'>My Repos</a>
-      </div>
-    </div>
+    </>
+  );
+};
+
+const MyRepos = withRouter(({match, history}) => {
+
+  const [masterKeys, setMasterKeys] = useState();
+  const [loaded, setLoaded] = useState(false);
+  const [importText, setImportText] = useState();
+  const [errorMessage, setErrorMessage] = useState();
+
+  useEffect(() => {
+    setMasterKeys(MasterKeyStorage.getMasterKeys());
+    setLoaded(true);
+  }, []);
+
+  const importMasterKeys = () => {
+    try {
+      setMasterKeys(MasterKeyStorage.importFromJSON(importText));
+      history.push(match.url);
+    } catch (e) {
+      setErrorMessage(e.toString());
+    }
+  };
+
+  return (
+    <>
+      <div>My Repos!</div>
+      {masterKeys &&
+        <>
+          <IonGrid fixed>
+            {masterKeys.map((entry: MasterKeyEntry, index: number) => (
+              <IonRow key={index} className="ion-align-items-center">
+                <IonCol size='2'><Link to={'/tx/' + entry.txId}>{entry.repoName}</Link></IonCol>
+                <IonCol size='7'>{entry.txId}</IonCol>
+              </IonRow>
+            ))}
+          </IonGrid>
+          <IonButton onClick={() => history.push('/import')}>Import...</IonButton>
+          <IonButton onClick={() => history.push('/export')}>Export...</IonButton>
+          <Route path={'/export'} render={() => (
+              <Modal title='Export Master Keys' onClose={() => history.push(match.url)}>
+                <div>
+                  <p>Copy the text and store in a text file.</p>
+                  <pre>{JSON.stringify(masterKeys, null, 2)}</pre>
+                  <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
+                </div>
+              </Modal>
+            )} />
+          <Route path={'/import'} render={() => (
+              <Modal title='Import Master Keys' onClose={() => history.push(match.url)}>
+                <div>
+                  <p>Paste Master Keys JSON.</p>
+                  <IonTextarea rows={8} onInput={(e) => {setImportText((e.target! as HTMLInputElement).value)}} placeholder='Paste text here'/>
+                  <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
+                  <IonButton onClick={importMasterKeys} disabled={!importText} color='success'>Import</IonButton>
+                  {errorMessage &&
+                  <p>{errorMessage}</p>}
+                </div>
+              </Modal>
+            )} />
+        </>
+      }
+      {!masterKeys && loaded &&
+        <div>
+          <p>You have no repos stored in this browser.</p>
+          <p>Create a new repo to get started or view one of the featured or recent.</p>
+          <p>Import master keys.</p>
+        </div>
+      }
+
+    </>
+  );
+});
+
+const FeaturedRepos = () => {
+  return (
+    <div>Featured Repos</div>
+  );
+};
+
+const RecentRepos = () => {
+  return (
+    <div>Recent Repos</div>
   );
 };
 

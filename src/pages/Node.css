@@ -160,3 +160,11 @@ pre#text {
 ion-button {
   text-transform: none;
 }
+
+.monospace {
+  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+}
+
+.grey {
+  color: grey;
+}
