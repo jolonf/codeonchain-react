@@ -79,7 +79,7 @@ class NewRepoModal extends React.Component<NewRepoProps> {
             <div><input type='text' id='repo-version' onChange={(e) => this.onVersionChanged(e)} defaultValue='0.0.1' size={80} /></div>
             
             <div className='label'>Sponsor: </div>
-            <div><input type='text' id='repo-sponsor' onChange={(e) => this.onSponsorChanged(e)} placeholder='Paymail, BSV address, or MoneyButton id' size={80} /></div>
+            <div><input type='text' id='repo-sponsor' onChange={(e) => this.onSponsorChanged(e)} placeholder='Paymail, BSV address, or MoneyButton id (Optional)' size={80} /></div>
             
             <div className='label hidden'>Hidden: </div>
             <div className='hidden'><label className='checkbox-input'><input type='checkbox' id='repo-hidden' onChange={(e) => this.onHiddenChanged(e)} /> Hide from listing on Codeonchain</label></div>
@@ -111,9 +111,10 @@ class NewRepoModal extends React.Component<NewRepoProps> {
                 </div>
               )
             }
+            {this.state.message &&
             <p>
               {this.state.message}
-            </p>
+            </p>}
           </div>
         </div>
       </div>
@@ -129,12 +130,9 @@ class NewRepoModal extends React.Component<NewRepoProps> {
     }
   }
   onRepoNameChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    console.log('name changed')
     this.setState({repoName: e.target.value});
     this.setState({moneyButtonDisabled: true});
-    if (e.target.value) {
-      this.setState({createRepoButtonDisabled: false});
-    }
+    this.setState({createRepoButtonDisabled: !e.target.value});
   }
   onDescriptionChanged(e: React.ChangeEvent<HTMLInputElement>) {
     this.setState({description: e.target.value});
@@ -158,7 +156,6 @@ class NewRepoModal extends React.Component<NewRepoProps> {
   }
 
   async generateOutputs() {
-    console.log('generate outputs');
     const moneyButtonProps = this.state.moneyButtonProps;
     let moneyButtonDisabled = true;
 
@@ -221,7 +218,6 @@ class NewRepoModal extends React.Component<NewRepoProps> {
 
   async onPayment(arg: any) {
     this.setState({message: 'Initialising repo...'});
-    console.log('on payment');
     const fundingTxId = arg.txid;
     console.log('funding/parent txid: ' + fundingTxId);
 

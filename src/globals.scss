@@ -9,3 +9,19 @@
 @import '~@ionic/core/css/text-alignment.css';
 @import '~@ionic/core/css/text-transformation.css';
 @import '~@ionic/core/css/flex-utils.css';
+
+.fade-enter {
+  opacity: 0.01;
+}
+.fade-enter.fade-enter-active {
+  opacity: 1;
+  transition: opacity 150ms ease-in;
+}
+.fade-exit {
+  opacity: 1;
+}
+
+.fade-exit.fade-exit-active {
+  opacity: 0.01;
+  transition: opacity 150ms ease-in;
+}

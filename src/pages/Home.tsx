@@ -13,6 +13,7 @@ import { Switch, Route, RouteComponentProps, withRouter } from 'react-router';
 import { MasterKeyStorage, MasterKeyEntry } from '../storage/MasterKeyStorage';
 import { Link } from 'react-router-dom';
 import Modal from '../components/Modal';
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
 class Home extends React.Component<RouteComponentProps> {
   featuredTransactions = [
@@ -86,7 +87,7 @@ const ReposTabs = () => {
   );
 };
 
-const MyRepos = withRouter(({match, history}) => {
+const MyRepos = withRouter(({match, history, location}) => {
 
   const [masterKeys, setMasterKeys] = useState();
   const [loaded, setLoaded] = useState(false);
@@ -120,27 +121,35 @@ const MyRepos = withRouter(({match, history}) => {
                 </IonRow>
               ))}
             </IonGrid>
-            <Route path={'/export'} render={() => (
-                <Modal title='Export Master Keys' onClose={() => history.push(match.url)}>
-                  <div>
-                    <p>Copy the text and store in a text file.</p>
-                    <pre>{JSON.stringify(masterKeys, null, 2)}</pre>
-                    <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
-                  </div>
-                </Modal>
-              )} />
-            <Route path={'/import'} render={() => (
-                <Modal title='Import Master Keys' onClose={() => history.push(match.url)}>
-                  <div>
-                    <p>Paste Master Keys JSON.</p>
-                    <IonTextarea rows={8} onInput={(e) => {setImportText((e.target! as HTMLInputElement).value)}} placeholder='Paste text here'/>
-                    <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
-                    <IonButton onClick={importMasterKeys} disabled={!importText} color='success'>Import</IonButton>
-                    {errorMessage &&
-                    <p>{errorMessage}</p>}
-                  </div>
-                </Modal>
-              )} />
+            <TransitionGroup>
+              <CSSTransition key={location.key} classNames='fade' timeout={300}>
+                <Switch location={location}>
+
+                  <Route path={'/export'} render={() => (
+                      <Modal title='Export Master Keys' onClose={() => history.push(match.url)}>
+                        <div>
+                          <p>Copy the text and store in a text file.</p>
+                          <pre>{JSON.stringify(masterKeys, null, 2)}</pre>
+                          <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
+                        </div>
+                      </Modal>
+                    )} />
+                  <Route path={'/import'} render={() => (
+                      <Modal title='Import Master Keys' onClose={() => history.push(match.url)}>
+                        <div>
+                          <p>Paste Master Keys JSON.</p>
+                          <IonTextarea rows={8} onInput={(e) => {setImportText((e.target! as HTMLInputElement).value)}} placeholder='Paste text here'/>
+                          <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
+                          <IonButton onClick={importMasterKeys} disabled={!importText} color='success'>Import</IonButton>
+                          {errorMessage &&
+                          <p>{errorMessage}</p>}
+                        </div>
+                      </Modal>
+                    )} />
+
+                </Switch>
+              </CSSTransition>
+            </TransitionGroup>
           </>
         }
         {!masterKeys && loaded &&

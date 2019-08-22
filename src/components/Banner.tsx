@@ -3,9 +3,11 @@ import React from 'react';
 import NewRepoModal from './NewRepoModal';
 import './Banner.css';
 import '../theme/variables.scss';
-import { Link, withRouter, Route } from 'react-router-dom';
+import '../globals.scss';
+import { Link, withRouter, Route, Switch } from 'react-router-dom';
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
-const Banner = withRouter(({history, match}) => {
+const Banner = withRouter(({history, match, location}) => {
 
   function search(e: KeyboardEvent) {
     if (e.keyCode === 13) {
@@ -34,9 +36,15 @@ const Banner = withRouter(({history, match}) => {
           <IonSearchbar onKeyUp={search} placeholder="Transaction ID" mode="ios"/>
         </div>
       </div>
-      <Route path={`${basePath}/new-repo`} render={() => (
-        <NewRepoModal onClose={() => history.push(baseURL)}/>
-      )}/>
+      <TransitionGroup>
+        <CSSTransition key={location.key} classNames='fade' timeout={300}>
+          <Switch location={location}>
+            <Route path={`${basePath}/new-repo`} render={() => (
+              <NewRepoModal onClose={() => history.push(baseURL)}/>
+            )}/>
+          </Switch>
+        </CSSTransition>
+      </TransitionGroup>
     </>
   );
 });

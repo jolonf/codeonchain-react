@@ -3,7 +3,7 @@ import './Node.css';
 
 import { IonContent, IonRow, IonCol, IonGrid, IonButton, IonIcon } from '@ionic/react';
 import React, { useState } from 'react';
-import { RouteComponentProps, withRouter, Route, Link } from 'react-router-dom';
+import { RouteComponentProps, withRouter, Route, Link, Switch } from 'react-router-dom';
 import { document, folder } from 'ionicons/icons';
 
 import showdown from 'showdown';
@@ -20,6 +20,7 @@ import NewFolderModal from '../components/NewFolderModal';
 import { FileTree } from '../metanet/FileTree';
 import Modal from '../components/Modal';
 import NodeAddressDetails from '../components/NodeAddressDetails';
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
 interface MatchParams {
   txId: string;
@@ -58,17 +59,26 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
               <Readme text={this.state.readme} />
               <FileData metanetNode={metanetNode} data={this.state.fileData} />
 
-              <Route path={`${this.props.match.path}/add-files`} render={() => (
-                <AddFilesModal onClose={() => this.props.history.push(this.props.match.url)} parent={metanetNode} fileTrees={this.state.fileTrees} />
-              )}/>
-              <Route path={`${this.props.match.path}/new-folder`} render={() => (
-                <NewFolderModal onClose={() => this.props.history.push(this.props.match.url)} parent={metanetNode} />
-              )}/>
-              <Route path={`${this.props.match.path}/details`} render={() => (
-                <Modal title='Node Details' onClose={() => {this.onCloseNodeAddressDetailsModal()}}>
-                  <NodeAddressDetails node={this.state.metanetNode} onClose={() => {this.onCloseNodeAddressDetailsModal()}}/>
-                </Modal>
-              )} />
+              <TransitionGroup>
+                <CSSTransition key={this.props.location.key} classNames='fade' timeout={300}>
+                  <Switch location={this.props.location}>
+
+                      <Route path={`${this.props.match.path}/add-files`} render={() => (
+                        <AddFilesModal onClose={() => this.props.history.push(this.props.match.url)} parent={metanetNode} fileTrees={this.state.fileTrees} />
+                      )}/>
+                      <Route path={`${this.props.match.path}/new-folder`} render={() => (
+                        <NewFolderModal onClose={() => this.props.history.push(this.props.match.url)} parent={metanetNode} />
+                      )}/>
+                      <Route path={`${this.props.match.path}/details`} render={() => (
+                        <Modal title='Node Details' onClose={() => {this.onCloseNodeAddressDetailsModal()}}>
+                          <NodeAddressDetails node={this.state.metanetNode} onClose={() => {this.onCloseNodeAddressDetailsModal()}}/>
+                        </Modal>
+                      )} />
+
+                  </Switch>
+                </CSSTransition>
+              </TransitionGroup>
+
             </>
             }
             
