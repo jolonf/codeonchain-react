@@ -17,7 +17,6 @@ import { cloudUpload } from "ionicons/icons";
 import { MasterKeyStorage } from "../storage/MasterKeyStorage";
 
 interface AddFilesProps {
-  isOpen: boolean;
   onClose: Function;
   parent: MetanetNode;
   fileTrees: FileTree[];
@@ -47,36 +46,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
   currentFileIndex = 0;
   maxFiles = 0;
 
-  componentDidUpdate(prevProps: AddFilesProps) {
-    // Check if there is an existing master key each time modal is opened
-    if (this.props.isOpen && !prevProps.isOpen) {
-      const masterKeyEntry = MasterKeyStorage.getMasterKey(this.props.parent.nodeAddress);
-
-      if (masterKeyEntry) {
-        this.setState({xprivkey: masterKeyEntry.masterKey});
-      } else {
-        console.log('MasterKey entry not found in local storage');
-      }
-
-      this.setState({fileTrees: this.props.fileTrees});
-
-      if (this.props.fileTrees.length > 0) {
-        this.setState({addFilesButtonDisabled: false});
-      }
-
-      this.setState({
-        moneyButtonDisabled: true,
-        message: '',
-        progressBarValue: 0,
-        progressBarIndeterminate: false
-      });
-    }
-  }
-
   render() {
-    if (!this.props.isOpen) {
-      return null;
-    }
 
     return (
       <div id="overlay" onClick={() => this.props.onClose()}>
@@ -145,9 +115,25 @@ class AddFilesModal extends React.Component<AddFilesProps> {
   }
 
   componentDidMount() {
+    const masterKeyEntry = MasterKeyStorage.getMasterKeyEntry(this.props.parent.nodeAddress);
+
+    if (masterKeyEntry) {
+      this.setState({xprivkey: masterKeyEntry.masterKey});
+    } else {
+      console.log('MasterKey entry not found in local storage');
+    }
+
+    this.setState({fileTrees: this.props.fileTrees});
+
+    if (this.props.fileTrees.length > 0) {
+      this.setState({addFilesButtonDisabled: false});
+    }
+
     this.setState({
-      addFilesButtonDisabled: true,
-      moneyButtonDisabled: true
+      moneyButtonDisabled: true,
+      message: '',
+      progressBarValue: 0,
+      progressBarIndeterminate: false
     });
   }
 
@@ -435,7 +421,6 @@ class AddFilesModal extends React.Component<AddFilesProps> {
   onError(arg: any) {
     console.log('Error', arg);
   }
-
 
 }
 

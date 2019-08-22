@@ -13,9 +13,9 @@ import { DerivationPathProtocol } from '../protocols/derivation_path.protocol';
 import { IonButton } from "@ionic/react";
 import { MetanetNode } from "../metanet/metanet_node";
 import { MasterKeyStorage } from "../storage/MasterKeyStorage";
+import { RouteComponentProps, withRouter } from "react-router";
 
-interface NewRepoProps {
-  isOpen: boolean;
+interface NewRepoProps extends RouteComponentProps {
   onClose: Function;
 }
 
@@ -34,36 +34,27 @@ class NewRepoModal extends React.Component<NewRepoProps> {
     moneyButtonDisabled: true,
     moneyButtonProps: {} as any,
     createRepoButtonDisabled: true
-  }
+  };
 
-  
   bsvignoreData = '';
   bsvpushData = '';
   bsvignoreNode = new MetanetNode(this.state.masterKey, 'm/0/0', '.bsvignore');
   bsvpushNode = new MetanetNode(this.state.masterKey, 'm/0/1', 'bsvpush.json');
 
-  componentDidUpdate(prevProps: NewRepoProps) {
-    // Create a new master key each time it is opened
-    if (this.props.isOpen && !prevProps.isOpen) {
+  componentDidMount() {
+    const masterKey = bsv.HDPrivateKey();
 
-      const masterKey = bsv.HDPrivateKey();
-
-      this.bsvignoreNode = new MetanetNode(masterKey, 'm/0/0', '.bsvignore');
-      this.bsvpushNode = new MetanetNode(masterKey, 'm/0/1', 'bsvpush.json');
-    
-      this.setState({
-        moneyButtonDisabled: true,
-        createRepoButtonDisabled: true,
-        masterKey: masterKey
-      });
-    }
+    this.bsvignoreNode = new MetanetNode(masterKey, 'm/0/0', '.bsvignore');
+    this.bsvpushNode = new MetanetNode(masterKey, 'm/0/1', 'bsvpush.json');
+  
+    this.setState({
+      moneyButtonDisabled: true,
+      createRepoButtonDisabled: true,
+      masterKey: masterKey
+    });
   }
 
   render() {
-    if (!this.props.isOpen) {
-      return null;
-    }
-
     return (
       <div id="overlay" onClick={() => this.props.onClose()}>
         <div id="dialog" onClick={(e) => {e.stopPropagation()}}>
@@ -253,7 +244,8 @@ class NewRepoModal extends React.Component<NewRepoProps> {
 
     console.log(`Repo created, view here https://codeonchain.network/tx/${fundingTxId}`);   
     this.setState({message: `Repo created, loading...`});   
-    window.location.href = `/tx/${fundingTxId}`;
+    //window.location.href = `/tx/${fundingTxId}`;
+    this.props.history.push(`/tx/${fundingTxId}`);
   }
 
   onError(arg: any) {
@@ -262,4 +254,4 @@ class NewRepoModal extends React.Component<NewRepoProps> {
 
 }
 
-export default NewRepoModal;
+export default withRouter<NewRepoProps>(NewRepoModal);

@@ -1,28 +1,24 @@
 import { IonButton, IonSearchbar } from '@ionic/react';
-import React, { useState } from 'react';
+import React from 'react';
 import NewRepoModal from './NewRepoModal';
 import './Banner.css';
 import '../theme/variables.scss';
-import { Link } from 'react-router-dom';
+import { Link, withRouter, Route } from 'react-router-dom';
 
-const Banner: React.FunctionComponent = () => {
-
-  const [newRepoOpen, setNewRepOpen] = useState(false);
-
-  function newRepository(e: Event) {
-    e.preventDefault();
-    setNewRepOpen(true);
-  }
+const Banner = withRouter(({history, match}) => {
 
   function search(e: KeyboardEvent) {
     if (e.keyCode === 13) {
       e.preventDefault();
       const value = (e.target as HTMLInputElement).value;
       if (value.length === 64) {
-        window.location.href = `/tx/${(e.target as HTMLInputElement).value}`;
+        history.push(`/tx/${(e.target as HTMLInputElement).value}`);
       }
     }
   }
+
+  const baseURL = match.url === '/' ? '' : match.url;
+  const basePath = match.path === '/' ? '' : match.path;
 
   return (
     <>
@@ -32,16 +28,18 @@ const Banner: React.FunctionComponent = () => {
           <span id='upload'>Upload a repository to metanet using <a href="https://github.com/jolonf/bsvpush">bsvpush</a></span>
         </div>
         <div id="new-repo-btn-container">
-          <IonButton id="new-repo-btn" color="success" onClick={newRepository}>+ New Repository</IonButton>
+          <IonButton id="new-repo-btn" color="success" onClick={() => history.push(`${baseURL}/new-repo`)}>+ New Repository</IonButton>
         </div>
         <div id='search-container'>
           <IonSearchbar onKeyUp={search} placeholder="Transaction ID" mode="ios"/>
         </div>
       </div>
-      <NewRepoModal isOpen={newRepoOpen} onClose={() => {setNewRepOpen(false)}}/>
+      <Route path={`${basePath}/new-repo`} render={() => (
+        <NewRepoModal onClose={() => history.push(baseURL)}/>
+      )}/>
     </>
   );
-};
+});
 
 const Logo: React.FunctionComponent = () => {
   return ( 

@@ -13,6 +13,7 @@ export class MetanetNode {
   dataString = '';
   dataHex = '';
 
+  parent = null as MetanetNode | null;
   children = [] as MetanetNode[];
 
   fee = 0;

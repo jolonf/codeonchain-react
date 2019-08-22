@@ -1,3 +1,4 @@
+import bsv from 'bsv';
 
 export interface MasterKeyEntry {
   masterKey: string; // xpriv
@@ -44,7 +45,7 @@ export class MasterKeyStorage {
     }
   }
 
-  static getMasterKey(publicAddress: string): MasterKeyEntry | undefined {
+  static getMasterKeyEntry(publicAddress: string): MasterKeyEntry | undefined {
     if (window.localStorage) {
       let masterKeysJson = window.localStorage.masterKeys;
 
@@ -52,6 +53,14 @@ export class MasterKeyStorage {
         const masterKeys = JSON.parse(masterKeysJson);
         return masterKeys.find((entry: MasterKeyEntry) => entry.publicAddress === publicAddress);
       }
+    }
+  }
+
+  static getMasterKey(publicAddress: string): any {
+    const masterKeyEntry = this.getMasterKeyEntry(publicAddress);
+
+    if (masterKeyEntry) {
+      return bsv.HDPrivateKey(masterKeyEntry.masterKey);
     }
   }
 

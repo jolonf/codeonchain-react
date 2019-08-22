@@ -121,13 +121,32 @@ export class Metanet {
         metanetNode.mimeType = this.guessMimeType(metanetNode.name);
       }
 
-      metanetNode.dataString = metanet.out[0].s7;
-      metanetNode.dataHex = metanet.out[0].h7;
+      metanetNode.dataString = metanet.out[0].s7 || metanet.out[0].ls7;
+      metanetNode.dataHex = metanet.out[0].h7 || metanet.out[0].lh7;
 
       children.push(metanetNode);
     }
 
     return children;
+  }
+
+  /**
+   * Returns the root of the tree if it has been loaded, if not
+   * loads missing parents.
+   * @param node 
+   */
+  static async getRoot(node: MetanetNode): Promise<MetanetNode|undefined> {
+    // Root node has a parent txid of NULL
+    if (node.parentTxId === 'NULL') {
+      return node;
+    }
+
+    if (!node.parent) {
+      node.parent = await this.getMetanetNode(node.parentTxId);
+    }
+    if (node.parent) {
+      return await this.getRoot(node.parent);
+    }
   }
 
   static guessMimeType(name: string): string {
@@ -320,6 +339,20 @@ export class Metanet {
   }
 
   /**
+   * Find all of the utxos for the derivation path and create a transaction which sends them to toAddress.
+   */
+  static async refundTx(masterKey: any, derivationPath: string, toAddress: string): Promise<any> {
+    const fromAddress = this.addressForDerivationPath(masterKey, derivationPath);
+    const utxos       = await this.bitindex.address.getUtxos(fromAddress);
+    const balance     = utxos.map((utxo: any) => utxo.satoshis).reduce((sum: number, balance: number) => sum + balance);
+    const estimateTx  = new bsv.Transaction().from([utxos]).to(toAddress, balance);
+    const fee         = this.estimateFee(estimateTx);
+    const tx          = new bsv.Transaction().from([utxos]).to(toAddress, balance - fee).fee(fee).sign(masterKey.deriveChild(derivationPath).privateKey);
+
+    return tx;
+  }
+
+  /**
    * Converts the OP_RETURN payload to hex strings.
    * @param array
    */
@@ -391,7 +424,7 @@ export class Metanet {
    * @param fundingTxId
    */
   static async waitForUnconfirmedParents(fundingTxId: string, statusCallback: Function) {
-    await this.waitForFundingTransactionToAppear(fundingTxId);
+    await this.waitForTransactionToAppear(fundingTxId);
 
     while (await this.memPoolChainLength(fundingTxId) >= 25) {
       const message = `Waiting for unconfirmed parents (Bitcoin has a maximum of 25 unconfirmed parents), this could take 10 minutes or longer... 
@@ -406,12 +439,12 @@ The Money Button transaction is: ${fundingTxId}`;
   }
 
   /**
-   * Wait for funding TX to appear before checking unconfirmed parents.
+   * Wait for TX to appear.
    * @param fundingTx
    */
-  static async waitForFundingTransactionToAppear(fundingTxId: string) {
-    console.log(`Waiting for funding transaction to appear on network... (tx id: ${fundingTxId})`);
-    while (!(await this.bitindex.tx.get(fundingTxId)).txid) {
+  static async waitForTransactionToAppear(txId: string) {
+    console.log(`Waiting for transaction to appear on network... (tx id: ${txId})`);
+    while (!(await this.bitindex.tx.get(txId)).txid) {
       await this.sleep(1000);
     }
   }
@@ -449,6 +482,10 @@ The Money Button transaction is: ${fundingTxId}`;
       console.log(response);
       throw new Error(JSON.stringify(response, null, 2));
     }
+  }
+
+  static addressForDerivationPath(masterKey: any, derivationPath: string) {
+    return masterKey.deriveChild(derivationPath).publicKey.toAddress().toString();
   }
 
   static async sleep(ms: number) {

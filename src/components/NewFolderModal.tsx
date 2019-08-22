@@ -13,7 +13,6 @@ import { MetanetNode } from "../metanet/metanet_node";
 import { MasterKeyStorage } from "../storage/MasterKeyStorage";
 
 interface NewFolderProps {
-  isOpen: boolean;
   onClose: Function;
   parent: MetanetNode;
 }
@@ -30,23 +29,7 @@ class NewFolderModal extends React.Component<NewFolderProps> {
     message: ''
   }
 
-  componentDidUpdate(prevProps: NewFolderProps) {
-    // Check if there is an existing master key each time modal is opened
-    if (this.props.isOpen && !prevProps.isOpen) {
-      const masterKeyEntry = MasterKeyStorage.getMasterKey(this.props.parent.nodeAddress);
-
-      if (masterKeyEntry) {
-        this.setState({xprivkey: masterKeyEntry.masterKey});
-      } else {
-        console.log('MasterKey entry not found in local storage');
-      }
-    }
-  }
-
   render() {
-    if (!this.props.isOpen) {
-      return null;
-    }
 
     return (
       <div id="overlay" onClick={() => this.props.onClose()}>
@@ -99,6 +82,13 @@ class NewFolderModal extends React.Component<NewFolderProps> {
 
   componentDidMount() {
     this.setState({moneyButtonDisabled: true});
+
+    const masterKeyEntry = MasterKeyStorage.getMasterKeyEntry(this.props.parent.nodeAddress);
+    if (masterKeyEntry) {
+      this.setState({xprivkey: masterKeyEntry.masterKey});
+    } else {
+      console.log('MasterKey entry not found in local storage');
+    }
   }
 
   onMasterKeyChanged(e: React.ChangeEvent<HTMLInputElement>) {
