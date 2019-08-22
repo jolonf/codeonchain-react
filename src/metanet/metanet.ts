@@ -41,20 +41,21 @@ export class Metanet {
     return metanetNodes[0];
   }
 
-  static async getChildren(txId: string): Promise<MetanetNode[]> {
+  static async getChildren(parentAddress: string, txId: string): Promise<MetanetNode[]> {
     const results = await Promise.all([
-      this.getChildFiles(txId),
-      this.getChildDirectories(txId)
+      this.getChildFiles(parentAddress, txId),
+      this.getChildDirectories(parentAddress, txId)
     ]);
 
     return results[0].concat(results[1]).sort((a, b) => a.name < b.name ? -1 : 1);
   }
 
-  static async getChildFiles(txId: string): Promise<MetanetNode[]> {
+  static async getChildFiles(parentAddress: string, txId: string): Promise<MetanetNode[]> {
     return this.getMetanetNodes({
       "v": 3,
       "q": {
         "find": {
+          "in.e.a": parentAddress,
           "out.s4": txId, // Parent tx
           "out.s6": BProtocol.address
         },
@@ -70,11 +71,12 @@ export class Metanet {
     });
   }
 
-  static async getChildDirectories(txId: string): Promise<MetanetNode[]> {
+  static async getChildDirectories(parentAddress: string, txId: string): Promise<MetanetNode[]> {
     return this.getMetanetNodes({
       "v": 3,
       "q": {
         "find": {
+          "in.e.a": parentAddress,
           "out.s4": txId, // Parent tx
           "out.s6": DirectoryProtocol.address
         },
@@ -95,7 +97,7 @@ export class Metanet {
     const response = await fetch(url, { headers: { key: '1DzNX2LzKrmoyYVyqMG46LLknzSd7TUYYP' } });
     const json = await response.json();
     //console.log(json);
-    const children = [];
+    const children = [] as MetanetNode[];
 
     const items = json.u.concat(json.c);
 
@@ -103,28 +105,33 @@ export class Metanet {
       let metanetNode = new MetanetNode();
 
       metanetNode.nodeAddress = metanet.out[0].s3;
-      metanetNode.nodeTxId = metanet.tx.h;
-      metanetNode.parentTxId = metanet.out[0].s4;
-      metanetNode.protocol = metanet.out[0].s6;
-      metanetNode.mimeType = metanet.out[0].s8;
-      metanetNode.encoding = metanet.out[0].s9;
 
-      if (metanetNode.isDirectory()) {
-        metanetNode.name = metanet.out[0].s7;
-        metanetNode.derivationPath = metanet.out[0].s10;
-      } else {
-        metanetNode.name = metanet.out[0].s10;
-        metanetNode.derivationPath = metanet.out[0].s13;
+      // Don't add the node if a child has already been added with the same address 
+      // as this is an older version
+      if (!children.find(child => child.nodeAddress === metanetNode.nodeAddress)) {
+        metanetNode.nodeTxId = metanet.tx.h;
+        metanetNode.parentTxId = metanet.out[0].s4;
+        metanetNode.protocol = metanet.out[0].s6;
+        metanetNode.mimeType = metanet.out[0].s8;
+        metanetNode.encoding = metanet.out[0].s9;
+
+        if (metanetNode.isDirectory()) {
+          metanetNode.name = metanet.out[0].s7;
+          metanetNode.derivationPath = metanet.out[0].s10;
+        } else {
+          metanetNode.name = metanet.out[0].s10;
+          metanetNode.derivationPath = metanet.out[0].s13;
+        }
+
+        if (metanetNode.mimeType && metanetNode.mimeType.trim() === '') {
+          metanetNode.mimeType = this.guessMimeType(metanetNode.name);
+        }
+
+        metanetNode.dataString = metanet.out[0].s7 || metanet.out[0].ls7;
+        metanetNode.dataHex = metanet.out[0].h7 || metanet.out[0].lh7;
+
+        children.push(metanetNode);
       }
-
-      if (metanetNode.mimeType && metanetNode.mimeType.trim() === '') {
-        metanetNode.mimeType = this.guessMimeType(metanetNode.name);
-      }
-
-      metanetNode.dataString = metanet.out[0].s7 || metanet.out[0].ls7;
-      metanetNode.dataHex = metanet.out[0].h7 || metanet.out[0].lh7;
-
-      children.push(metanetNode);
     }
 
     return children;
@@ -185,7 +192,7 @@ export class Metanet {
 
     // If the fileTree already exists, get children
     if (parent.nodeTxId) {
-      const children = await Metanet.getChildren(parent.nodeTxId);
+      const children = await Metanet.getChildren(parent.nodeAddress, parent.nodeTxId);
       parent.children = children;
     }
 

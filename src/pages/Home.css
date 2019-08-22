@@ -22,10 +22,12 @@ a:hover {
   display: flex;
   width: var(--width);
   max-width: 100%;
-  margin: auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .tab {
+  box-sizing: border-box;
   padding: 10px;
   border: 1px solid rgba(197, 203, 209, 0);
   border-bottom-width: 0px;
@@ -55,8 +57,31 @@ a:hover {
   color: #24292e;
 }
 
+.repos {
+  box-sizing: border-box;
+  width: var(--width);
+  max-width: 100%;
+  margin: auto;
+  margin-bottom: 5px;
+  border: 1px solid rgb(197, 203, 209);
+  padding: 5px;
+}
+
 #footer-message {
   color: grey;
   text-align: center;
   font-size: 0.8em;
+}
+
+.monospace {
+  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+}
+
+.grey {
+  color: grey;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
 }

@@ -2,8 +2,7 @@ import './Home.css';
 
 import React, { useEffect, useState } from 'react';
 import { IonContent, IonGrid, IonRow, IonCol, IonButton, IonTextarea } from '@ionic/react';
-import { RoutedTabs, NavTab } from 'react-router-tabs';
-
+import { NavTab } from 'react-router-tabs';
 
 import MoneyButton from '@moneybutton/react-money-button';
 
@@ -79,13 +78,9 @@ const ReposTabs = () => {
   return (
     <>
       <div id="repos-tabs">
-        <RoutedTabs 
-            tabClassName='tab'
-            activeTabClassName='tab-selected'>
-          <NavTab to='/' exact>My Repos</NavTab>
-          <NavTab to='/featured-repos'>Featured</NavTab>
-          <NavTab to='/recent-repos'>Recent</NavTab>
-        </RoutedTabs>
+        <NavTab className='tab' activeClassName='tab-selected' to='/' exact>My Repos</NavTab>
+        <NavTab className='tab' activeClassName='tab-selected' to='/featured-repos'>Featured</NavTab>
+        <NavTab className='tab' activeClassName='tab-selected' to='/recent-repos'>Recent</NavTab>
       </div>
     </>
   );
@@ -114,50 +109,53 @@ const MyRepos = withRouter(({match, history}) => {
 
   return (
     <>
-      <div>My Repos!</div>
+      <div className='repos'>
+        {masterKeys &&
+          <>
+            <IonGrid fixed>
+              {masterKeys.map((entry: MasterKeyEntry, index: number) => (
+                <IonRow key={index} className="ion-align-items-center">
+                  <IonCol size='2'><Link to={'/tx/' + entry.txId}>{entry.repoName}</Link></IonCol>
+                  <IonCol size='10' className='monospace grey'>{entry.txId}</IonCol>
+                </IonRow>
+              ))}
+            </IonGrid>
+            <Route path={'/export'} render={() => (
+                <Modal title='Export Master Keys' onClose={() => history.push(match.url)}>
+                  <div>
+                    <p>Copy the text and store in a text file.</p>
+                    <pre>{JSON.stringify(masterKeys, null, 2)}</pre>
+                    <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
+                  </div>
+                </Modal>
+              )} />
+            <Route path={'/import'} render={() => (
+                <Modal title='Import Master Keys' onClose={() => history.push(match.url)}>
+                  <div>
+                    <p>Paste Master Keys JSON.</p>
+                    <IonTextarea rows={8} onInput={(e) => {setImportText((e.target! as HTMLInputElement).value)}} placeholder='Paste text here'/>
+                    <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
+                    <IonButton onClick={importMasterKeys} disabled={!importText} color='success'>Import</IonButton>
+                    {errorMessage &&
+                    <p>{errorMessage}</p>}
+                  </div>
+                </Modal>
+              )} />
+          </>
+        }
+        {!masterKeys && loaded &&
+          <div>
+            <p>You have no repos stored in this browser.</p>
+            <p>Create a new repo to get started or view one of the featured or recent.</p>
+            <p>Import master keys.</p>
+          </div>
+        }
+      </div>
       {masterKeys &&
-        <>
-          <IonGrid fixed>
-            {masterKeys.map((entry: MasterKeyEntry, index: number) => (
-              <IonRow key={index} className="ion-align-items-center">
-                <IonCol size='2'><Link to={'/tx/' + entry.txId}>{entry.repoName}</Link></IonCol>
-                <IonCol size='7'>{entry.txId}</IonCol>
-              </IonRow>
-            ))}
-          </IonGrid>
-          <IonButton onClick={() => history.push('/import')}>Import...</IonButton>
-          <IonButton onClick={() => history.push('/export')}>Export...</IonButton>
-          <Route path={'/export'} render={() => (
-              <Modal title='Export Master Keys' onClose={() => history.push(match.url)}>
-                <div>
-                  <p>Copy the text and store in a text file.</p>
-                  <pre>{JSON.stringify(masterKeys, null, 2)}</pre>
-                  <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
-                </div>
-              </Modal>
-            )} />
-          <Route path={'/import'} render={() => (
-              <Modal title='Import Master Keys' onClose={() => history.push(match.url)}>
-                <div>
-                  <p>Paste Master Keys JSON.</p>
-                  <IonTextarea rows={8} onInput={(e) => {setImportText((e.target! as HTMLInputElement).value)}} placeholder='Paste text here'/>
-                  <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
-                  <IonButton onClick={importMasterKeys} disabled={!importText} color='success'>Import</IonButton>
-                  {errorMessage &&
-                  <p>{errorMessage}</p>}
-                </div>
-              </Modal>
-            )} />
-        </>
-      }
-      {!masterKeys && loaded &&
-        <div>
-          <p>You have no repos stored in this browser.</p>
-          <p>Create a new repo to get started or view one of the featured or recent.</p>
-          <p>Import master keys.</p>
-        </div>
-      }
-
+        <div className='flex-center'>
+          <IonButton href='/import' color='medium'>Import...</IonButton>
+          <IonButton href='/export' color='medium'>Export...</IonButton>
+        </div>}
     </>
   );
 });

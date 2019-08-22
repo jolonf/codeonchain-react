@@ -54,7 +54,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
               {this.state.children.length > 0 &&
               <Children metanetNode={this.state.metanetNode} children={this.state.children} onFilesDropped={(items: any) => this.onFilesDropped(items)}/>}
               {metanetNode.isDirectory && metanetNode.isDirectory() &&
-              <DirectoryButtons onNewFolderButton={() => this.onNewFolderButton()} onAddFilesButton={() => this.onAddFilesButton()}/>}
+              <DirectoryButtons />}
               <Readme text={this.state.readme} />
               <FileData metanetNode={metanetNode} data={this.state.fileData} />
 
@@ -120,7 +120,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
   }
 
   async loadChildren(metanetNode: MetanetNode) {
-    metanetNode.children = await Metanet.getChildren(metanetNode.nodeTxId);
+    metanetNode.children = await Metanet.getChildren(metanetNode.nodeAddress, metanetNode.nodeTxId);
 
     this.setState({children: metanetNode.children});
 
@@ -173,18 +173,6 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
         this.setState({fileData: metanetNode.dataString});
       }
     }
-  }
-
-  onNewFolderButton() {
-    this.props.history.push(`${this.props.match.url}/new-folder`);
-  }
-
-  onAddFilesButton() {
-    this.props.history.push(`${this.props.match.url}/add-files`);
-  }
-
-  newFolderModalClosed() {
-    this.setState({newFolderModalOpen: false});
   }
 
   onCloseNodeAddressDetailsModal() {
@@ -299,15 +287,12 @@ const Children = withRouter<ChildrenProps>(({metanetNode, children, onFilesDropp
   );
 });
 
-interface DirectoryButtonsProps extends RouteComponentProps {
-  onNewFolderButton: Function;
-  onAddFilesButton: Function;
-}
-const DirectoryButtons = withRouter<DirectoryButtonsProps>(({onAddFilesButton, onNewFolderButton}) => {
+
+const DirectoryButtons = withRouter(({match}) => {
   return (
     <div id='directory-buttons-container'>
-      <IonButton onClick={() => onAddFilesButton()} fill='outline' color='medium'><IonIcon slot='start' icon={document} /> + Files</IonButton>
-      <IonButton onClick={() => onNewFolderButton()} fill='outline' color='medium'><IonIcon slot='start' icon={folder} /> + Folder</IonButton>
+      <IonButton href={`${match.url}/add-files`} fill='outline' color='medium'><IonIcon slot='start' icon={document} /> + Files</IonButton>
+      <IonButton href={`${match.url}/new-folder`} fill='outline' color='medium'><IonIcon slot='start' icon={folder} /> + Folder</IonButton>
     </div>
   );
 });

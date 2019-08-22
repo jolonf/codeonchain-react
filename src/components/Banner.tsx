@@ -28,7 +28,7 @@ const Banner = withRouter(({history, match}) => {
           <span id='upload'>Upload a repository to metanet using <a href="https://github.com/jolonf/bsvpush">bsvpush</a></span>
         </div>
         <div id="new-repo-btn-container">
-          <IonButton id="new-repo-btn" color="success" onClick={() => history.push(`${baseURL}/new-repo`)}>+ New Repository</IonButton>
+          <IonButton id="new-repo-btn" color="success" href={`${baseURL}/new-repo`}>+ New Repository</IonButton>
         </div>
         <div id='search-container'>
           <IonSearchbar onKeyUp={search} placeholder="Transaction ID" mode="ios"/>
