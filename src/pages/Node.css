@@ -4,6 +4,7 @@
   margin-left: 0px;
   margin-bottom: 20px;
   padding-top: 20px;
+  padding-left: 10px;
   border-top: var(--border);
   border-bottom: var(--border);
 }
@@ -104,6 +105,7 @@ div#money-button-container {
   color: grey;
   padding-top: 5px;
   width: 780px;
+  max-width: 95%;
 }
 
 div#readme {

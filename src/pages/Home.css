@@ -17,11 +17,17 @@ a:hover {
   text-decoration: underline;
 }
 
+ion-col {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
 
 #repos-tabs {
   display: flex;
   width: var(--width);
   max-width: 100%;
+  margin-top: 20px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -65,6 +71,11 @@ a:hover {
   margin-bottom: 5px;
   border: 1px solid rgb(197, 203, 209);
   padding: 5px;
+}
+
+.no-repos {
+  text-align: center;
+  color: darkslategrey;
 }
 
 #footer-message {

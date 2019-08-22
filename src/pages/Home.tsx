@@ -1,19 +1,19 @@
 import './Home.css';
 
 import React, { useEffect, useState } from 'react';
-import { IonContent, IonGrid, IonRow, IonCol, IonButton, IonTextarea } from '@ionic/react';
+import { IonContent, IonGrid, IonRow, IonCol, IonButton, IonToast } from '@ionic/react';
 import { NavTab } from 'react-router-tabs';
+
+import { readAsText } from 'promise-file-reader';
 
 import MoneyButton from '@moneybutton/react-money-button';
 
 import { Repos } from '../metanet/repos';
 import { Repo } from '../metanet/repo';
 import Banner from '../components/Banner';
-import { Switch, Route, RouteComponentProps, withRouter } from 'react-router';
+import { Switch, Route, RouteComponentProps } from 'react-router';
 import { MasterKeyStorage, MasterKeyEntry } from '../storage/MasterKeyStorage';
 import { Link } from 'react-router-dom';
-import Modal from '../components/Modal';
-import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
 class Home extends React.Component<RouteComponentProps> {
   featuredTransactions = [
@@ -48,7 +48,7 @@ class Home extends React.Component<RouteComponentProps> {
 
     return (
       <>
-        <IonContent className="ion-padding">
+        <IonContent>
           <Banner />
           <ReposTabs />
           <Switch>
@@ -87,25 +87,49 @@ const ReposTabs = () => {
   );
 };
 
-const MyRepos = withRouter(({match, history, location}) => {
+const MyRepos = () => {
 
   const [masterKeys, setMasterKeys] = useState();
   const [loaded, setLoaded] = useState(false);
-  const [importText, setImportText] = useState();
-  const [errorMessage, setErrorMessage] = useState();
+  const [exportObjectUrl, setExportObjectUrl] = useState();
+  const [message, setMessage] = useState({message: '', color: 'dark', duration: 1000, showCloseButton: false});
 
   useEffect(() => {
-    setMasterKeys(MasterKeyStorage.getMasterKeys());
+    const masterKeys = MasterKeyStorage.getMasterKeys();
+    setMasterKeys(masterKeys);
+    const masterKeysJSON = JSON.stringify(masterKeys, null, 2);
+    setExportObjectUrl(URL.createObjectURL(new File([masterKeysJSON], 'masterkeys.json', { type: 'application/json' })));
     setLoaded(true);
   }, []);
 
   const importMasterKeys = () => {
+    const fileInput = document.getElementById('hidden-file-input');
+    fileInput!.click();
+  };
+
+  const onFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
-      setMasterKeys(MasterKeyStorage.importFromJSON(importText));
-      history.push(match.url);
+      const json = await readAsText(e.target!.files![0]);
+      setMasterKeys(MasterKeyStorage.importFromJSON(json));
+      setMessage({
+        message: `Master keys imported`,
+        color: 'dark',
+        duration: 2000,
+        showCloseButton: false
+      });
     } catch (e) {
-      setErrorMessage(e.toString());
+      setMessage({
+        message: `Error reading file: ${e.toString()}`,
+        color: 'danger',
+        duration: 0,
+        showCloseButton: true
+      });
     }
+  };
+
+  const exportMasterKeys = () => {
+    const a = document.getElementById('hidden-export-link');
+    a!.click();
   };
 
   return (
@@ -121,53 +145,26 @@ const MyRepos = withRouter(({match, history, location}) => {
                 </IonRow>
               ))}
             </IonGrid>
-            <TransitionGroup>
-              <CSSTransition key={location.key} classNames='fade' timeout={300}>
-                <Switch location={location}>
-
-                  <Route path={'/export'} render={() => (
-                      <Modal title='Export Master Keys' onClose={() => history.push(match.url)}>
-                        <div>
-                          <p>Copy the text and store in a text file.</p>
-                          <pre>{JSON.stringify(masterKeys, null, 2)}</pre>
-                          <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
-                        </div>
-                      </Modal>
-                    )} />
-                  <Route path={'/import'} render={() => (
-                      <Modal title='Import Master Keys' onClose={() => history.push(match.url)}>
-                        <div>
-                          <p>Paste Master Keys JSON.</p>
-                          <IonTextarea rows={8} onInput={(e) => {setImportText((e.target! as HTMLInputElement).value)}} placeholder='Paste text here'/>
-                          <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
-                          <IonButton onClick={importMasterKeys} disabled={!importText} color='success'>Import</IonButton>
-                          {errorMessage &&
-                          <p>{errorMessage}</p>}
-                        </div>
-                      </Modal>
-                    )} />
-
-                </Switch>
-              </CSSTransition>
-            </TransitionGroup>
           </>
         }
         {!masterKeys && loaded &&
-          <div>
-            <p>You have no repos stored in this browser.</p>
-            <p>Create a new repo to get started or view one of the featured or recent.</p>
-            <p>Import master keys.</p>
+          <div className='no-repos'>
+            <p>Create a new repo to get started</p>
+            <p><IonButton href='/new-repo' color='success'>+ New Repository</IonButton></p>
+            <p>Or view one of the <Link to='/featured-repos'>featured</Link> or <Link to='/recent-repos'>recently</Link> added repos.</p>
           </div>
         }
       </div>
-      {masterKeys &&
-        <div className='flex-center'>
-          <IonButton href='/import' color='medium'>Import...</IonButton>
-          <IonButton href='/export' color='medium'>Export...</IonButton>
-        </div>}
+      <div className='flex-center'>
+        <IonButton onClick={importMasterKeys} color='medium'>Import...</IonButton>
+        <IonButton onClick={exportMasterKeys} color='medium' disabled={!masterKeys}>Export...</IonButton>
+        <a id='hidden-export-link' href={exportObjectUrl} download='masterkeys.json'> </a>
+        <input onChange={onFilesSelected} id='hidden-file-input' type='file' />
+      </div>
+      <IonToast isOpen={!!message.message} onDidDismiss={() => setMessage({message: '', color: 'dark', duration: 0, showCloseButton:false})} message={message.message} duration={message.duration} color={message.color} showCloseButton={message.showCloseButton} />
     </>
   );
-});
+};
 
 const FeaturedRepos = () => {
   return (
