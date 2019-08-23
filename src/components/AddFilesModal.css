@@ -18,6 +18,10 @@
   display: none;
 }
 
+#hidden-folder-input {
+  display: none;
+}
+
 #drop-files-message {
   color: grey;
 }

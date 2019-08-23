@@ -1,3 +1,5 @@
+import { MetanetNode } from "../metanet/metanet_node";
+import { Cell, Metanet } from "../metanet/metanet";
 
 /**
  * B:// format https://github.com/unwriter/B
@@ -14,4 +16,17 @@ export class BProtocol {
       fileName // Filename
     ];
   }
+
+  static read(metanetNode: MetanetNode, cell: Cell[]) {
+    metanetNode.dataString  = cell[1].s || cell[1].ls;
+    metanetNode.dataBase64  = cell[1].b || cell[1].lb;
+    metanetNode.mimeType    = cell[2].s;
+    metanetNode.encoding    = cell[3].s;
+    metanetNode.name        = cell[4].s;
+
+    if (metanetNode.mimeType && metanetNode.mimeType.trim() === '') {
+      metanetNode.mimeType = Metanet.guessMimeType(metanetNode.name);
+    }
+  }
+
 }

@@ -174,10 +174,12 @@ class NewRepoModal extends React.Component<NewRepoProps> {
         hidden: this.state.hidden,
         test: true
       }, null, 2);
+      this.bsvignoreNode.parent = rootNode;
+      this.bsvpushNode.parent = rootNode;
 
       // We aren't sending these transactions yet, just estimating the size to fund the parent
-      await Metanet.fileDummyTx(this.state.masterKey, rootNode, this.bsvignoreNode, this.bsvignoreData);
-      await Metanet.fileDummyTx(this.state.masterKey, rootNode, this.bsvpushNode, this.bsvpushData);
+      await Metanet.fileDummyTx(this.state.masterKey, this.bsvignoreNode, this.bsvignoreData);
+      await Metanet.fileDummyTx(this.state.masterKey, this.bsvpushNode, this.bsvpushData);
 
       const opReturnPayload = [
         METANET_FLAG,
@@ -228,10 +230,12 @@ class NewRepoModal extends React.Component<NewRepoProps> {
     const rootNode = new MetanetNode(this.state.masterKey, 'm/0', this.state.repoName);
 
     this.bsvignoreNode.parentTxId = fundingTxId;
+    this.bsvignoreNode.parent = rootNode;
     this.bsvpushNode.parentTxId = fundingTxId;
+    this.bsvpushNode.parent = rootNode;
 
-    const bsvignoreTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, rootNode, this.bsvignoreNode, this.bsvignoreData);
-    const bsvpushTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, rootNode, this.bsvpushNode, this.bsvpushData);
+    const bsvignoreTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, this.bsvignoreNode, this.bsvignoreData);
+    const bsvpushTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, this.bsvpushNode, this.bsvpushData);
 
     console.log(`Sending .bsvignore transaction: ${bsvignoreTx.id}`);
     await Metanet.send(bsvignoreTx);

@@ -42,12 +42,14 @@ class AddFilesModal extends React.Component<AddFilesProps> {
   }
 
   fileInput: HTMLInputElement | null = null;
+  folderInput: HTMLInputElement | null = null;
 
   currentFileIndex = 0;
   maxFiles = 0;
 
   render() {
 
+    const fileCount = this.countFiles(this.state.fileTrees);
     return (
       <div id="overlay" onClick={() => this.props.onClose()}>
         <div id="dialog" onClick={(e) => {e.stopPropagation()}}>
@@ -62,12 +64,14 @@ class AddFilesModal extends React.Component<AddFilesProps> {
               <IonIcon icon={cloudUpload} color='medium' size='large' />
               <p id='drop-files-message'>Drop files here</p>
               <div id='select-files-button-container'>
-                <IonButton onClick={() => {this.onSelectFilesButton()}}>Select Files...</IonButton>
-                <input ref={ref => this.setFileInputRef(ref)} onChange={(e) => this.onFilesSelected(e)} id='hidden-file-input' type='file' multiple />
+                <IonButton onClick={() => {this.fileInput!.click()}}>Select Files...</IonButton>
+                <IonButton onClick={() => {this.folderInput!.click()}}>Select Folder...</IonButton>
+                <input ref={ref => this.fileInput = ref} onChange={(e) => this.onFilesSelected(e)} id='hidden-file-input' type='file' multiple />
+                <input ref={ref => this.setFolderInputRef(ref)} onChange={(e) => this.onFolderSelected(e)} id='hidden-folder-input' type='file'  />
               </div>
               {this.state.fileTrees.length > 0 &&
               <p id='file-count'>
-                {this.countFiles(this.state.fileTrees)} file(s) selected
+                {`${fileCount} file${fileCount > 1 ? 's' : ''}`} selected
               </p>}
             </div>
           </div>
@@ -115,13 +119,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
   }
 
   componentDidMount() {
-    const masterKeyEntry = MasterKeyStorage.getMasterKeyEntry(this.props.parent.nodeAddress);
-
-    if (masterKeyEntry) {
-      this.setState({xprivkey: masterKeyEntry.masterKey});
-    } else {
-      console.log('MasterKey entry not found in local storage');
-    }
+    this.loadMasterKey();
 
     this.setState({fileTrees: this.props.fileTrees});
 
@@ -137,14 +135,30 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     });
   }
 
+  componentDidUpdate(prevProps: AddFilesProps) {
+    if (this.props.parent !== prevProps.parent) {
+      this.loadMasterKey();
+    }
+  }
+
+  loadMasterKey() {
+    const masterKeyEntry = MasterKeyStorage.getMasterKeyEntry(this.props.parent.nodeAddress);
+
+    if (masterKeyEntry) {
+      this.setState({xprivkey: masterKeyEntry.masterKey});
+    } else {
+      console.log('MasterKey entry not found in local storage');
+    }  
+  }
+
   /**
    * Hack to get around TypeScript not supporting the webkitdirectory directly in JSX.
    * @param ref 
    */
-  setFileInputRef(ref: HTMLInputElement | null) {
+  setFolderInputRef(ref: HTMLInputElement | null) {
     if (ref) {
-      this.fileInput = ref;
-      this.fileInput.setAttribute('webkitdirectory', 'true');
+      this.folderInput = ref;
+      this.folderInput.setAttribute('webkitdirectory', 'true');
     }
   }
 
@@ -186,18 +200,27 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     }
   }
 
-  onSelectFilesButton() {
-    const htmlElement = this.fileInput as HTMLElement;
-    htmlElement.click();
+  async onFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    if (this.fileInput && this.fileInput.files) {
+      const fileTrees = [] as FileTree[];
+      for (let i = 0; i < this.fileInput.files.length; i++) {
+        const file = this.fileInput.files[i];
+        fileTrees.push(new FileTree(file.name, file));
+      }
+      this.setState({
+        fileTrees: fileTrees,
+        moneyButtonDisabled: true
+      });
+      if (this.state.xprivkey) {
+        this.setState({addFilesButtonDisabled: false});
+      }
+    }
   }
 
-  async onFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    console.log('Files selected');
-    console.log(e.target.files);
-
-    if (this.state.xprivkey && this.fileInput && this.fileInput.files) {
+  async onFolderSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    if (this.folderInput && this.folderInput.files) {
       this.setState({
-        fileTrees: this.fileListToFileTrees(this.fileInput.files),
+        fileTrees: this.fileListToFileTrees(this.folderInput.files),
         moneyButtonDisabled: true
       });
       if (this.state.xprivkey) {
@@ -302,8 +325,11 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     return fileTrees.length === 0 ? 0 : fileTrees.map(fileTree => fileTree.fileCount()).reduce((sum, count) => sum + count);
   }
 
+  countTxs(fileTrees: FileTree[]) {
+    return fileTrees.length === 0 ? 0 : fileTrees.map(fileTree => fileTree.txCount()).reduce((sum, count) => sum + count);
+  }
+
   async generateOutputs(fileTrees: FileTree[]) {
-    console.log('generate outputs');
     const moneyButtonProps = this.state.moneyButtonProps;
     let moneyButtonDisabled = true;
 
@@ -313,8 +339,8 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
 
       this.setState({message: 'Estimating fees...'});
-      this.currentFileIndex = 1;
-      this.maxFiles = this.countFiles(fileTrees);
+      this.currentFileIndex = 0;
+      this.maxFiles = this.countTxs(fileTrees);
 
       const fee = await Metanet.estimateFileTreesFee(masterKey, this.props.parent, fileTrees, (name: string) => this.onEstimateFeeStatus(name));
 
@@ -324,7 +350,6 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
       this.generateFundingOutputs(outputs, masterKey, this.props.parent, fileTrees);
 
-      console.log('Parent node: ', this.props.parent);
       console.log('Money Button outputs', outputs);
       moneyButtonDisabled = false;
       moneyButtonProps.outputs = outputs;
@@ -336,8 +361,9 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
   onEstimateFeeStatus(name: string) {
     this.currentFileIndex++;
+    //console.log(`Estimate fees status: ${name}`);
     this.setState({
-      message: `Estimating fees: ${this.currentFileIndex} of ${this.maxFiles}`,
+      message: `Estimating fees: ${this.currentFileIndex} of ${this.maxFiles} transactions`,
       progressBarValue: this.currentFileIndex / this.maxFiles
     });
   }
@@ -355,9 +381,10 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     for (const fileTree of fileTrees) {
       let metanetNode = parent.childWithName(fileTree.name);
       if (metanetNode) {
+        const fee = metanetNode.fee + metanetNode.partFees.reduce((sum, fee) => sum + fee, 0);
         outputs.push({
           to: parent.nodeAddress,
-          amount: metanetNode.fee / 1e8,
+          amount: fee / 1e8,
           currency: 'BSV'
         });
         this.generateFundingOutputs(outputs, masterKey, metanetNode, fileTree.children);
@@ -388,14 +415,14 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
 
     this.setState({message: 'Sending files...'});
-    this.currentFileIndex = 1;
-    this.maxFiles = this.countFiles(this.state.fileTrees);
+    this.currentFileIndex = 0;
+    this.maxFiles = this.countTxs(this.state.fileTrees);
 
     try {
       this.setState({progressBarIndeterminate: true});
       await Metanet.waitForUnconfirmedParents(fundingTxId, (message: string) => this.onWaitForUnconfirmedParentsCallback(message));
       this.setState({progressBarIndeterminate: false});
-      await Metanet.sendFileTrees(masterKey, fundingTxId, 0, this.props.parent, this.state.fileTrees, (name: string) => this.onSendFilesCallback(name));
+      await Metanet.sendFileTrees(masterKey, fundingTxId, this.props.parent, this.state.fileTrees, (name: string) => this.onSendFilesCallback(name));
       console.log(`Files added`); 
       this.setState({message: `Files added, reloading page...`});
       window.location.reload(false);

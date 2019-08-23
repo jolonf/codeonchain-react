@@ -119,8 +119,9 @@ class NewFolderModal extends React.Component<NewFolderProps> {
       metanetNode.name = this.state.folderName;
       metanetNode.parentTxId = this.props.parent.nodeTxId;
       metanetNode.derivationPath = this.props.parent.nextFreeDerivationPath();
+      metanetNode.parent = this.props.parent;
 
-      const folderTx = await Metanet.folderDummyTx(masterKey, this.props.parent, metanetNode);
+      const folderTx = await Metanet.folderDummyTx(masterKey, metanetNode);
 
       const folderFee = folderTx.getFee() / 1e8;
 
@@ -153,12 +154,9 @@ class NewFolderModal extends React.Component<NewFolderProps> {
     metanetNode.name = this.state.folderName;
     metanetNode.parentTxId = this.props.parent.nodeTxId;
     metanetNode.derivationPath = this.props.parent.nextFreeDerivationPath();
+    metanetNode.parent = this.props.parent;
 
-    const folderTx = await Metanet.folderTx(
-      masterKey, 
-      fundingTxId,
-      this.props.parent,
-      metanetNode);
+    const folderTx = await Metanet.folderTx(masterKey, fundingTxId, metanetNode);
 
     console.log(`Sending folder transaction: ${folderTx.id}`);
     await Metanet.send(folderTx);

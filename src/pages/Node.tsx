@@ -31,7 +31,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     metanetNode: new MetanetNode(),
     children: [] as MetanetNode[],
     readme: '',
-    fileData: null as (string | null),
+    fileData: null as (string | null), // File text or ObjectURL string
     repo: null as (Repo | null),
     newFolderModalOpen: false,
     fileTrees: [] as FileTree[]
@@ -167,20 +167,24 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
   async loadFile(metanetNode: MetanetNode) {
     //console.log(`mime type = ${metanetNode.mimeType}`);
     if (metanetNode.protocol === BProtocol.address || metanetNode.protocol === BcatProtocol.address) {
+      let bcatBuffer = null as Buffer | null;
+      if (metanetNode.protocol === BcatProtocol.address) {
+        bcatBuffer = await Metanet.getBcatData(metanetNode.partTxIds);
+      }
       if (metanetNode.mimeType === 'image/svg+xml') {
         console.log('svg data');
-        this.setState({fileData: metanetNode.dataString});
+        this.setState({fileData: (bcatBuffer && bcatBuffer.toString()) || metanetNode.dataString});
       } else if (metanetNode.mimeType.startsWith('image/')) {
         console.log('img data');
         // Image
-        const blob = new Blob([Buffer.from(metanetNode.dataHex, 'hex').buffer]);
+        const blob = new Blob([bcatBuffer || Buffer.from(metanetNode.dataBase64, 'base64').buffer]);
         const url = URL.createObjectURL(blob);
         this.setState({fileData: url});
       } else {
         console.log('text data');
         console.log(`encoding: ${metanetNode.encoding}`);
         // Text
-        this.setState({fileData: metanetNode.dataString});
+        this.setState({fileData: (bcatBuffer && bcatBuffer.toString()) || metanetNode.dataString});
       }
     }
   }

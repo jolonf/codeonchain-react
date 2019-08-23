@@ -6,23 +6,48 @@ import { Buffer } from 'buffer';
 
 import { MetanetNode } from "./metanet_node";
 import { BProtocol } from '../protocols/b.protocol';
-//import { BcatProtocol } from '../protocols/bcat.protocol';
+import { BcatPartProtocol } from '../protocols/bcat-part.protocol';
 import { DerivationPathProtocol } from '../protocols/derivation_path.protocol';
 import { MetanetProtocol } from '../protocols/metanet.protocol';
 import { DirectoryProtocol } from '../protocols/directory.protocol';
 import { FileTree } from './FileTree';
+import { BcatProtocol } from '../protocols/bcat.protocol';
 
 export const METANET_FLAG     = 'meta';
 export const MIN_OUTPUT_VALUE = 546;
+export const MAX_TX_SIZE      = 90000; // Any files larger will use Bcat protocol
 
 //const METANARIA_ENDPOINT = 'https://metanaria.planaria.network/q/';
-const GENESIS_ENDPOINT = 'https://genesis.bitdb.network/q/1FnauZ9aUH2Bex6JzdcV4eNX7oLSSEbxtN/';
+//const GENESIS_ENDPOINT = 'https://genesis.bitdb.network/q/1FnauZ9aUH2Bex6JzdcV4eNX7oLSSEbxtN/';
+const BOB_ENDPOINT = 'https://bob.planaria.network/q/1GgmC7Cg782YtQ6R9QkM58voyWeQJmJJzG/';
 
-const PLANARIA_ENDPOINT = GENESIS_ENDPOINT;
+const PLANARIA_ENDPOINT = BOB_ENDPOINT;
+
+export interface Cell {
+  s: string,
+  ls: string,
+  b: string,
+  lb: string
+}
 
 export class Metanet {
 
   static bitindex = new BitIndexSDK();
+
+  static protocols = [
+    MetanetProtocol,
+    BProtocol,
+    BcatProtocol,
+    BcatPartProtocol,
+    DirectoryProtocol,
+    DerivationPathProtocol
+  ] as any[];
+
+  static fileProtocols = [
+    BProtocol.address,
+    BcatProtocol.address,
+    DirectoryProtocol.address
+  ] as any[];
 
   static async getMetanetNode(txId: string): Promise<MetanetNode> {
     const metanetNodes = await this.getMetanetNodes({
@@ -33,7 +58,7 @@ export class Metanet {
           },
           "project": {
               "tx.h": 1,
-              "out": 1
+              "out.tape.cell": 1,
           }
       }
     });
@@ -42,51 +67,32 @@ export class Metanet {
   }
 
   static async getChildren(parentAddress: string, txId: string): Promise<MetanetNode[]> {
-    const results = await Promise.all([
-      this.getChildFiles(parentAddress, txId),
-      this.getChildDirectories(parentAddress, txId)
-    ]);
-
-    return results[0].concat(results[1]).sort((a, b) => a.name < b.name ? -1 : 1);
-  }
-
-  static async getChildFiles(parentAddress: string, txId: string): Promise<MetanetNode[]> {
     return this.getMetanetNodes({
       "v": 3,
       "q": {
         "find": {
           "in.e.a": parentAddress,
-          "out.s4": txId, // Parent tx
-          "out.s6": BProtocol.address
+          "$and": [ 
+            {
+              "out.tape.cell": {
+                "$elemMatch": {
+                  "i": 0,
+                  "s": "meta"
+                }
+              }
+            },
+            {
+              "out.tape.cell": {
+                "$elemMatch": {
+                  "i": 2,
+                  "s": txId
+                }
+              }
+            }
+          ]
         },
         "project": {
-          "tx.h": 1,
-          "out.s3": 1,  // Node address
-          "out.s4": 1,  // Parent txId
-          "out.s6": 1,  // File protocol
-          "out.s10": 1, // File name
-          "out.s13": 1  // Derivation path
-        }
-      }
-    });
-  }
-
-  static async getChildDirectories(parentAddress: string, txId: string): Promise<MetanetNode[]> {
-    return this.getMetanetNodes({
-      "v": 3,
-      "q": {
-        "find": {
-          "in.e.a": parentAddress,
-          "out.s4": txId, // Parent tx
-          "out.s6": DirectoryProtocol.address
-        },
-        "project": {
-          "tx.h": 1,
-          "out.s3": 1,  // Node address
-          "out.s4": 1,  // Parent txId
-          "out.s6": 1,  // Directory protocol
-          "out.s7": 1,  // Directory name
-          "out.s10": 1  // Derivation path
+          "out.tape.cell.s": 1, "tx.h": 1
         }
       }
     });
@@ -101,38 +107,27 @@ export class Metanet {
 
     const items = json.u.concat(json.c);
 
-    for (const metanet of items) { 
-      let metanetNode = new MetanetNode();
+    for (const item of items) { 
+      const metanetNode = new MetanetNode();
+      metanetNode.nodeTxId = item.tx.h;
 
-      metanetNode.nodeAddress = metanet.out[0].s3;
-
-      // Don't add the node if a child has already been added with the same address 
-      // as this is an older version
-      if (!children.find(child => child.nodeAddress === metanetNode.nodeAddress)) {
-        metanetNode.nodeTxId = metanet.tx.h;
-        metanetNode.parentTxId = metanet.out[0].s4;
-        metanetNode.protocol = metanet.out[0].s6;
-        metanetNode.mimeType = metanet.out[0].s8;
-        metanetNode.encoding = metanet.out[0].s9;
-
-        if (metanetNode.isDirectory()) {
-          metanetNode.name = metanet.out[0].s7;
-          metanetNode.derivationPath = metanet.out[0].s10;
-        } else {
-          metanetNode.name = metanet.out[0].s10;
-          metanetNode.derivationPath = metanet.out[0].s13;
+      for (const cell of item.out[0].tape) {
+        const protocolAddress = cell.cell[0].s;
+        const protocol = this.protocols.find(p => p.address === protocolAddress);
+        if (protocol) {
+          protocol.read(metanetNode, cell.cell as Cell);
+          if (this.fileProtocols.includes(protocolAddress)) {
+            metanetNode.protocol = protocolAddress;
+          }
         }
-
-        if (metanetNode.mimeType && metanetNode.mimeType.trim() === '') {
-          metanetNode.mimeType = this.guessMimeType(metanetNode.name);
-        }
-
-        metanetNode.dataString = metanet.out[0].s7 || metanet.out[0].ls7;
-        metanetNode.dataHex = metanet.out[0].h7 || metanet.out[0].lh7;
-
+      }
+      /// Only add node if there isn't an existing one with the same address as this is an older version
+      if (!children.find(c => c.nodeAddress === metanetNode.nodeAddress)) {
         children.push(metanetNode);
       }
     }
+
+    children.sort((a, b) => a.name < b.name ? -1 : 1);
 
     return children;
   }
@@ -212,25 +207,32 @@ export class Metanet {
         parent.children.push(metanetNode);
       }
 
+      metanetNode.parent = parent;
       metanetNode.parentTxId = parent.nodeTxId;
 
       callback(fileTree.name);
       console.log(`Estimating fees for: [${metanetNode.derivationPath}] ${fileTree.name}`);
 
-      // Create a node for this file tree
       if (fileTree.file) {
         // Estimate fee for file
         // Read in data
         const arrayBuffer = await readAsArrayBuffer(fileTree.file);
         const buffer = Buffer.from(arrayBuffer);
-        await this.fileDummyTx(masterKey, parent, metanetNode, buffer);
+        if (buffer.length > MAX_TX_SIZE) {
+          // Bcat
+          await this.estimateBcatParts(metanetNode, buffer, callback);
+          await this.bcatDummyTx(masterKey, metanetNode, metanetNode.partFees.map(() => '0'.repeat(64)));
+          fee += metanetNode.partFees.reduce((sum, fee) => sum + fee);
+        } else {
+          await this.fileDummyTx(masterKey, metanetNode, buffer);
+        }
         fee += metanetNode.fee;
         console.log(`file fee: ${metanetNode.fee}`);
       } else {
         // Estimate fee for directory
 
         // Directory tx
-        await this.folderDummyTx(masterKey, parent, metanetNode);
+        await this.folderDummyTx(masterKey, metanetNode);
         fee += metanetNode.fee;
         console.log(`folder fee: ${metanetNode.fee}`);
 
@@ -241,42 +243,111 @@ export class Metanet {
     return fee;
   }
 
-  static async sendFileTrees(masterKey: any, fundingTxId: string, vout: number, parent: MetanetNode, fileTrees: FileTree[], callback: Function) {
+  static async estimateBcatParts(metanetNode: MetanetNode, data: Buffer, callback: Function) {
+    metanetNode.partFees = [];
+    const partCount = Math.ceil(data.length / MAX_TX_SIZE);
+    for (let i = 0, offset = 0; i < partCount; i++, offset += MAX_TX_SIZE) {
+      callback(`${metanetNode.name} (part ${i + 1})`);
+      // Little sleep to ensure UI is updated
+      await this.sleep(1);
+      const buffer = data.subarray(offset, offset + MAX_TX_SIZE);
+      const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(BcatPartProtocol.from(buffer))];
+      const script = bsv.Script.fromASM(opReturn.join(' '));
+      const tx = new bsv.Transaction().from([this.dummyUtxo()]);
+      tx.addOutput(new bsv.Transaction.Output({ script: script.toString(), satoshis: 0 }));
+
+      metanetNode.partFees.push(this.estimateFee(tx));
+    }
+  }
+
+  static async sendFileTrees(masterKey: any, fundingTxId: string, parent: MetanetNode, fileTrees: FileTree[], callback: Function) {
     parent.spentVouts = [];
     for (const fileTree of fileTrees) {
       callback(fileTree.name);
       let metanetNode = parent.childWithName(fileTree.name);
 
       if (metanetNode) {
+        metanetNode.parent = parent;
         metanetNode.parentTxId = parent.nodeTxId;
         if (fileTree.file) {
           // Read in data
           const arrayBuffer = await readAsArrayBuffer(fileTree.file);
           const buffer = Buffer.from(arrayBuffer);
-          const fileTx = await this.fileTx(masterKey, fundingTxId, parent, metanetNode, buffer);
-          metanetNode.nodeTxId = fileTx.id;
-          await this.send(fileTx);
-          vout++;
+          if (buffer.length > MAX_TX_SIZE) {
+            // Bcat
+            const bcatPartTxIds = await this.sendBcatParts(masterKey, fundingTxId, metanetNode, buffer, callback);
+            const bcatTx = await this.bcatTx(masterKey, fundingTxId, metanetNode, bcatPartTxIds);
+            await this.send(bcatTx);
+          } else {
+            const fileTx = await this.fileTx(masterKey, fundingTxId, metanetNode, buffer);
+            metanetNode.nodeTxId = fileTx.id;
+            await this.send(fileTx);
+          }
         } else {
-          const folderTx = await this.folderTx(masterKey, fundingTxId, parent, metanetNode);
+          const folderTx = await this.folderTx(masterKey, fundingTxId, metanetNode);
           metanetNode.nodeTxId = folderTx.id;
           await this.send(folderTx);
-          vout++;
-          vout = await this.sendFileTrees(masterKey, fundingTxId, vout, metanetNode, fileTree.children, callback);
+          await this.sendFileTrees(masterKey, fundingTxId, metanetNode, fileTree.children, callback);
         }
       } else {
         console.log(`Child not found: ${fileTree.name}`);
       }
     }
-    return vout;
   }
 
+  static async sendBcatParts(masterKey: any, fundingTxId: string, metanetNode: MetanetNode, data: Buffer, callback: Function): Promise<string[]> {
+    if (!metanetNode.parent) {
+      throw new Error(`MetanetNode must have parent set: ${metanetNode.name}`);
+    }
+
+    const bcatTxIds = [] as string[];
+
+    const partCount = Math.ceil(data.length / MAX_TX_SIZE);
+
+    for (let i = 0, offset = 0; i < partCount; i++, offset += MAX_TX_SIZE) {
+      callback(`${metanetNode.name} (part ${i + 1})`);
+      const buffer = data.subarray(offset, offset + MAX_TX_SIZE);
+      const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(BcatPartProtocol.from(buffer))];
+
+      const parentKey = masterKey.deriveChild(metanetNode.parent.derivationPath);
+      let utxo = null;
+      while (!(utxo = await this.findUtxoByFee(metanetNode.parent, fundingTxId, metanetNode.fee))) {
+        console.log(`Waiting for UTXO for key: ${metanetNode.parent.nodeAddress}, txid: ${fundingTxId}, fee: ${metanetNode.fee}`);
+        await this.sleep(1000);
+      }
+      
+      const script = bsv.Script.fromASM(opReturn.join(' '));
+      const tx = new bsv.Transaction().from([utxo]);
+      tx.addOutput(new bsv.Transaction.Output({ script: script.toString(), satoshis: 0 }));
+      tx.fee(metanetNode.partFees[i]);
+      tx.sign(parentKey.privateKey);
+
+      console.log(`\tSending Bcat part [${bcatTxIds.length}] tx id: ${tx.id}`);
+      const response = await this.send(tx);
+      if (response.txid) {
+        bcatTxIds.push(response.txid);
+      }
+    }
+
+    return bcatTxIds;
+  }
+
+  /**
+   * 
+   * @param masterKey 
+   * @param fundingTxId 
+   * @param metanetNode Must have parent set with parent.derivationPath and parent.nodeAddress
+   * @param payload 
+   */
   static async createTx(masterKey: any, 
                         fundingTxId: string | null, 
-                        parent: MetanetNode,
                         metanetNode: MetanetNode,
                         payload: (string | Buffer)[]) {
-    const parentKey = masterKey.deriveChild(parent.derivationPath);
+    if (!metanetNode.parent) {
+      throw new Error(`MetanetNode must have parent set: ${metanetNode.name}`);
+    }
+
+    const parentKey = masterKey.deriveChild(metanetNode.parent.derivationPath);
     const nodeAddress = masterKey.deriveChild(metanetNode.derivationPath).publicKey.toAddress().toString();
 
     // If the node doesn't have a parent tx id yet give it a fake one to ensure fee estimation is accurate
@@ -299,11 +370,11 @@ export class Metanet {
 
     let utxo = null;
     if (fundingTxId) {
-      while (!(utxo = await this.findUtxoByFee(parent, fundingTxId, metanetNode.fee))) {
-        console.log(`Waiting for UTXO for key: ${parent.nodeAddress}, txid: ${fundingTxId}, fee: ${metanetNode.fee}`);
+      while (!(utxo = await this.findUtxoByFee(metanetNode.parent, fundingTxId, metanetNode.fee))) {
+        console.log(`Waiting for UTXO for key: ${metanetNode.parent.nodeAddress}, txid: ${fundingTxId}, fee: ${metanetNode.fee}`);
         await this.sleep(1000);
       }
-      console.log(`Using utxo with vout: ${utxo.vout} from address: ${parent.nodeAddress}`);
+      console.log(`Using utxo with vout: ${utxo.vout} from address: ${metanetNode.parent.nodeAddress}`);
     } else {
       // If no funding tx id was provided then we are just creating a dummy tx for estimating fee
       utxo = this.dummyUtxo();
@@ -320,29 +391,31 @@ export class Metanet {
     return tx;
   }
 
-  static parentDerivationPath(derivationPath: string): string {
-    //console.log('parentDerivationPath from: ' + derivationPath)
-    const pathComponents = derivationPath.split('/');
-    pathComponents.pop(); // remove last element
-    return pathComponents.join('/');
-  }
-
-  static async fileTx(masterKey: any, fundingTxId: string | null, parent: MetanetNode, metanetNode: MetanetNode, data: Buffer | string) {
+  static async fileTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, data: Buffer | string) {
     const payload = BProtocol.from(data, metanetNode.name, ' ', ' ');
-    return this.createTx(masterKey, fundingTxId, parent, metanetNode, payload);
+    return this.createTx(masterKey, fundingTxId, metanetNode, payload);
   }
 
-  static async fileDummyTx(masterKey: any, parent: MetanetNode, metanetNode: MetanetNode, data: Buffer | string) {
-    return this.fileTx(masterKey, null, parent, metanetNode, data);
+  static async fileDummyTx(masterKey: any, metanetNode: MetanetNode, data: Buffer | string) {
+    return this.fileTx(masterKey, null, metanetNode, data);
   }
 
-  static async folderTx(masterKey: any, fundingTxId: string | null, parent: MetanetNode, metanetNode: MetanetNode) {
+  static async folderTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode) {
     const payload = DirectoryProtocol.from(metanetNode.name);
-    return this.createTx(masterKey, fundingTxId, parent, metanetNode, payload);
+    return this.createTx(masterKey, fundingTxId, metanetNode, payload);
   }
 
-  static async folderDummyTx(masterKey: any, parent: MetanetNode, metanetNode: MetanetNode) {
-    return this.folderTx(masterKey, null, parent, metanetNode);
+  static async folderDummyTx(masterKey: any, metanetNode: MetanetNode) {
+    return this.folderTx(masterKey, null, metanetNode);
+  }
+
+  static async bcatTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, partTxIds: string[]) {
+    const payload = BcatProtocol.from(partTxIds, metanetNode.name, ' ', ' ');
+    return this.createTx(masterKey, fundingTxId, metanetNode, payload);
+  }
+
+  static async bcatDummyTx(masterKey: any, metanetNode: MetanetNode, partTxIds: string[]) {
+    return this.bcatTx(masterKey, null, metanetNode, partTxIds);
   }
 
   /**

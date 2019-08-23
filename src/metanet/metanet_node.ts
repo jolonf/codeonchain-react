@@ -11,12 +11,15 @@ export class MetanetNode {
   derivationPath = '';
 
   dataString = '';
-  dataHex = '';
+  //dataHex = '';
+  dataBase64 = '';
 
   parent = null as MetanetNode | null;
   children = [] as MetanetNode[];
+  partTxIds = [] as string[]; // Parts for Bcat
 
   fee = 0;
+  partFees = [] as number[]; // If this node has related txs (e.g. Bcat parts)
 
   spentVouts = [] as number[];
 
