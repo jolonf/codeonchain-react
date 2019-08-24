@@ -27,7 +27,7 @@ const Banner = withRouter(({history, match, location}) => {
       <div id='banner'>
         <div id='title-container'>
           <Logo />
-          <span id='upload'>Upload a repository to metanet using <a href="https://github.com/jolonf/bsvpush">bsvpush</a></span>
+          <span id='upload'>Upload repositories to metanet</span>
         </div>
         <div id="new-repo-btn-container">
           <IonButton id="new-repo-btn" color="success" href={`${baseURL}/new-repo`}>+ New Repository</IonButton>
@@ -52,11 +52,9 @@ const Banner = withRouter(({history, match, location}) => {
 const Logo: React.FunctionComponent = () => {
   return ( 
     <>
-      <span id='title'>
-        <Link id="title" to="/">
-          <span className='code'>Code</span><span className='on'>on</span><span className='chain'>chain</span>
-        </Link>
-      </span>
+      <Link id="title" to="/">
+        <span className='code'>Code</span><span className='on'>on</span><span className='chain'>chain</span>
+      </Link>
     </>
   );
 };

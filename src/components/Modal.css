@@ -25,6 +25,16 @@
   cursor: pointer;
 }
 
+.form-group {
+  border: 1px solid lightgrey;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+legend {
+  color: grey;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 20% 80%;

@@ -15,11 +15,12 @@ import { IonButton, IonIcon, IonProgressBar } from "@ionic/react";
 import { MetanetNode } from "../metanet/metanet_node";
 import { cloudUpload } from "ionicons/icons";
 import { MasterKeyStorage } from "../storage/MasterKeyStorage";
+import { RouteComponentProps, withRouter } from "react-router";
 
-interface AddFilesProps {
+interface AddFilesProps extends RouteComponentProps {
   onClose: Function;
+  onFilesAdded: Function;
   parent: MetanetNode;
-  fileTrees: FileTree[];
 }
 
 class AddFilesModal extends React.Component<AddFilesProps> {
@@ -35,7 +36,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
     dragHighlight: false,
 
-    fileTrees: this.props.fileTrees,
+    fileTrees: [] as FileTree[],
 
     progressBarValue: 0,
     progressBarIndeterminate: false
@@ -121,10 +122,13 @@ class AddFilesModal extends React.Component<AddFilesProps> {
   componentDidMount() {
     this.loadMasterKey();
 
-    this.setState({fileTrees: this.props.fileTrees});
+    if (this.props.location.state.fileTrees) {
+      console.log(this.props.location.state.fileTrees);
+      this.setState({fileTrees: this.props.location.state.fileTrees});
 
-    if (this.props.fileTrees.length > 0) {
-      this.setState({addFilesButtonDisabled: false});
+      if (this.props.location.state.fileTrees.length > 0) {
+        this.setState({addFilesButtonDisabled: false});
+      }
     }
 
     this.setState({
@@ -171,10 +175,6 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     }
   }
 
-  onDragEnter() {
-    this.setState({dragHighlight: true});
-  }
-
   onDragOver(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     this.setState({dragHighlight: true});
@@ -189,7 +189,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     e.preventDefault();
     this.setState({dragHighlight: false});
     if (e.dataTransfer.items) {
-      const fileTrees = await AddFilesModal.itemListToFileTrees(e.dataTransfer.items);
+      const fileTrees = await FileTree.itemListToFileTrees(e.dataTransfer.items);
       this.setState({
         fileTrees: fileTrees,
         moneyButtonDisabled: true
@@ -220,7 +220,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
   async onFolderSelected(e: React.ChangeEvent<HTMLInputElement>) {
     if (this.folderInput && this.folderInput.files) {
       this.setState({
-        fileTrees: this.fileListToFileTrees(this.folderInput.files),
+        fileTrees: FileTree.fileListToFileTrees(this.folderInput.files),
         moneyButtonDisabled: true
       });
       if (this.state.xprivkey) {
@@ -235,90 +235,6 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       
       this.generateOutputs(this.state.fileTrees);
     }
-  }
-
-  static async itemListToFileTrees(itemList: DataTransferItemList): Promise<FileTree[]> {
-    // Convert to array
-    const entries = [] as any[];
-    const fileTrees = [] as FileTree[];
-
-    for (let i = 0; i < itemList.length; i++) {
-      entries.push(itemList[i].webkitGetAsEntry());
-    }
-
-    for (const entry of entries) {
-      fileTrees.push(await this.entryToFileTree(entry));
-    }
-
-    return fileTrees;
-  }
-
-  static async entryToFileTree(entry: any): Promise<FileTree> {
-    let file = null;
-    if (entry.isFile) {
-      file = await this.getEntryFile(entry);
-    }
-
-    const fileTree = new FileTree(entry.name, file);
-
-    if (entry.isDirectory) {
-      const directoryReader = entry.createReader();
-
-      const entries = await this.readEntries(directoryReader);
-      for (const childEntry of entries) {
-          fileTree.children.push(await this.entryToFileTree(childEntry));
-      }
-    }
-
-    return fileTree;
-  }
-
-  static async readEntries(directoryReader: any): Promise<any[]> {
-    return new Promise<any[]>(resolve => {
-      directoryReader.readEntries((entries: any[]) => resolve(entries));
-    });
-  }
-
-  static async getEntryFile(entry: any): Promise<File> {
-    return new Promise<File>(resolve => {
-      entry.file((file: File) => resolve(file))
-    });
-  }
-
-  /**
-   * 
-   * @param fileList
-   * @returns array of FileTree objects
-   */
-  fileListToFileTrees(fileList: FileList): FileTree[] {
-      // Convert to array
-      const files = [];
-      const fileTrees = [] as FileTree[];
-
-      for (let i = 0; i < fileList.length; i++) {
-        files.push(fileList[i]);
-      }
-
-      files.forEach((file: any) => {
-        //console.log('File', file);
-        const path = file.webkitRelativePath as string;
-        if (path) {
-          const pathComponents = path.split('/');
-          let children = fileTrees;
-          pathComponents.forEach((pc, i) => {
-            //console.log(`pc: ${pc}`);
-            let f = children.find(c => c.name === pc);
-            if (!f) {
-              //console.log(`Creating FileTree for ${pc}`);
-              f = new FileTree(pc, i === pathComponents.length - 1 ? file : null);
-              children.push(f);
-            }
-            children = f.children;
-          });
-        }
-      });
-
-      return fileTrees;
   }
 
   countFiles(fileTrees: FileTree[]) {
@@ -421,11 +337,13 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     try {
       this.setState({progressBarIndeterminate: true});
       await Metanet.waitForUnconfirmedParents(fundingTxId, (message: string) => this.onWaitForUnconfirmedParentsCallback(message));
+      const txIds = await Metanet.sendFileTrees(masterKey, fundingTxId, this.props.parent, this.state.fileTrees, (name: string) => this.onSendFilesCallback(name));
+      console.log('Files added, txIds: ', txIds); 
+      this.setState({message: `Waiting for transaction to appear...`});
+      await Metanet.waitForTransactionToAppearOnPlanaria(txIds[0]);
       this.setState({progressBarIndeterminate: false});
-      await Metanet.sendFileTrees(masterKey, fundingTxId, this.props.parent, this.state.fileTrees, (name: string) => this.onSendFilesCallback(name));
-      console.log(`Files added`); 
-      this.setState({message: `Files added, reloading page...`});
-      window.location.reload(false);
+      this.setState({message: `Files Added`});
+      this.props.onFilesAdded();
     } catch (error) {
       console.log('Error sending files', error); 
       this.setState({message: `Error: ${error}`});
@@ -451,4 +369,4 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
 }
 
-export default AddFilesModal;
+export default withRouter<AddFilesProps>(AddFilesModal);

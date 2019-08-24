@@ -156,8 +156,8 @@ const MyRepos = () => {
         }
       </div>
       <div className='flex-center'>
-        <IonButton onClick={importMasterKeys} color='medium'>Import...</IonButton>
-        <IonButton onClick={exportMasterKeys} color='medium' disabled={!masterKeys}>Export...</IonButton>
+        <IonButton onClick={importMasterKeys} color='medium' size='small'>Import...</IonButton>
+        <IonButton onClick={exportMasterKeys} color='medium' disabled={!masterKeys} size='small'>Export...</IonButton>
         <a id='hidden-export-link' href={exportObjectUrl} download='masterkeys.json'> </a>
         <input onChange={onFilesSelected} id='hidden-file-input' type='file' />
       </div>

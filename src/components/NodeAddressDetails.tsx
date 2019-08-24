@@ -27,23 +27,29 @@ class NodeAddressDetails extends React.Component<NodeAddressDetailsProps> {
 
   render() {
     return (
-      <div>
-        <p>Node address: <span className={'monospace grey'}>{this.props.node.nodeAddress}</span></p>
-        <p>Funds: {this.state.updatingBalance ? <IonSpinner /> : this.state.sats} sats <IonButton onClick={() => this.updateBalance()}>Refresh</IonButton></p>
-        <p>If there are funds in this address, you can send them to another address:</p>
-        <p>
-          <input type='text' placeholder='BSV address' onChange={(e) => this.setState({sendAddress: e.target.value})}/> 
-          <IonButton disabled={this.state.sats === 0 || !this.state.sendAddress || this.state.sending || !this.state.masterKeyXprv} onClick={() => {this.onSendButton()}}>Send</IonButton>
-        </p>
-        <p>
-          <input type='text' placeholder='Master Key xprv' value={this.state.masterKeyXprv} onChange={(e) => this.setState({masterKeyXprv: e.target.value})}/> 
-        </p>
-        <p><IonButton onClick={() => {this.props.onClose()}}>Close</IonButton></p>
-        {this.state.message &&
-        <p>{this.state.message}</p>}
-        {this.state.sending &&
-        <IonProgressBar type='indeterminate'/>}
-      </div>
+      <>
+        <div>
+          <p>Node address: <span className={'monospace grey'}>{this.props.node.nodeAddress}</span></p>
+          <p>Funds: {this.state.updatingBalance ? <IonSpinner /> : this.state.sats} sats <IonButton onClick={() => this.updateBalance()}>Refresh</IonButton></p>
+          <p>If there are funds in this address, you can send them to another address:</p>
+          <p>
+            <input type='text' placeholder='BSV address' onChange={(e) => this.setState({sendAddress: e.target.value})}/> 
+            <IonButton disabled={this.state.sats === 0 || !this.state.sendAddress || this.state.sending || !this.state.masterKeyXprv} onClick={() => {this.onSendButton()}}>Send</IonButton>
+          </p>
+          <p>
+            <input type='text' placeholder='Master Key xprv' value={this.state.masterKeyXprv} onChange={(e) => this.setState({masterKeyXprv: e.target.value})}/> 
+          </p>
+        </div>
+        <div id='buttons'>
+          <p><IonButton onClick={() => {this.props.onClose()}}>Close</IonButton></p>
+        </div>
+        <div>
+          {this.state.message &&
+          <p>{this.state.message}</p>}
+          {this.state.sending &&
+          <IonProgressBar type='indeterminate'/>}
+        </div>
+      </>
     );
   }
 

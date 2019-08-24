@@ -60,31 +60,42 @@ class NewRepoModal extends React.Component<NewRepoProps> {
         <div id="dialog" onClick={(e) => {e.stopPropagation()}}>
           <h2 style={{marginTop: 0}}>New Repository</h2>
           <hr />
-          <div className='form-grid'>
-            <div className='label'>Master key: </div>
-            <div><input type='text' id='repo-master-key' size={64} readOnly value={this.state.masterKey.xprivkey} /><br />
-            <label><input type='checkbox' defaultChecked={this.state.storeMasterKey} id='store-master-key' onChange={(e) => this.onStoreMasterKeyChanged(e)}/> Store master key in local storage.</label><br/>
-            <span className='input-note'>You must keep a copy of the master key to be able to make future changes to the repo.</span></div>
-            
-            <div className='label'>Name: </div>
-            <div><input type='text' id='repo-name' onChange={(e) => this.onRepoNameChanged(e)} required placeholder='Repository name (Required)' size={80} /></div>
-            
-            <div className='label'>Description: </div>
-            <div><input type='text' id='repo-description' onChange={(e) => this.onDescriptionChanged(e)} placeholder='Repository description (Optional)' size={80} /></div>
-            
-            <div className='label'>Author: </div>
-            <div><input type='text' id='repo-author' onChange={(e) => this.onAuthorChanged(e)} placeholder='Optional' size={80} /></div>
-            
-            <div className='label'>Version: </div>
-            <div><input type='text' id='repo-version' onChange={(e) => this.onVersionChanged(e)} defaultValue='0.0.1' size={80} /></div>
-            
-            <div className='label'>Sponsor: </div>
-            <div><input type='text' id='repo-sponsor' onChange={(e) => this.onSponsorChanged(e)} placeholder='Paymail, BSV address, or MoneyButton id (Optional)' size={80} /></div>
-            
-            <div className='label hidden'>Hidden: </div>
-            <div className='hidden'><label className='checkbox-input'><input type='checkbox' id='repo-hidden' onChange={(e) => this.onHiddenChanged(e)} /> Hide from listing on Codeonchain</label></div>
+          <fieldset className='form-group'>
+            <legend>Required</legend>
+            <div className='form-grid'>
+              <div className='label'>Master key: </div>
+              <div><input type='text' id='repo-master-key' size={64} readOnly value={this.state.masterKey.xprivkey} /><br />
+              <label><input type='checkbox' defaultChecked={this.state.storeMasterKey} id='store-master-key' onChange={(e) => this.onStoreMasterKeyChanged(e)}/> Store master key in local storage.</label><br/>
+              <span className='input-note'>You must keep a copy of the master key to be able to make future changes to the repo.</span></div>
+              
+              <div className='label'>Repository Name: </div>
+              <div><input type='text' id='repo-name' onChange={(e) => this.onRepoNameChanged(e)} required placeholder='' size={80} /></div>
 
-          </div>
+            </div>
+          </fieldset>
+
+          <fieldset className='form-group'>
+          <legend>Optional</legend>
+            <div className='form-grid'>
+              
+              <div className='label'>Description: </div>
+              <div><input type='text' id='repo-description' onChange={(e) => this.onDescriptionChanged(e)} placeholder='' size={80} /></div>
+              
+              <div className='label'>Author: </div>
+              <div><input type='text' id='repo-author' onChange={(e) => this.onAuthorChanged(e)} placeholder='' size={80} /></div>
+              
+              <div className='label'>Version: </div>
+              <div><input type='text' id='repo-version' onChange={(e) => this.onVersionChanged(e)} defaultValue='0.0.1' size={80} /></div>
+              
+              <div className='label'>Sponsor: </div>
+              <div><input type='text' id='repo-sponsor' onChange={(e) => this.onSponsorChanged(e)} placeholder='Paymail, BSV address, or MoneyButton id (Optional)' size={80} /></div>
+              
+              <div className='label hidden'>Hidden: </div>
+              <div className='hidden'><label className='checkbox-input'><input type='checkbox' id='repo-hidden' onChange={(e) => this.onHiddenChanged(e)} /> Hide from listing on Codeonchain</label></div>
+
+            </div>
+          </fieldset>
+
           <div id='buttons'>
             <div>
               <IonButton onClick={() => this.props.onClose()}>Close</IonButton>

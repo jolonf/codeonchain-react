@@ -1,6 +1,5 @@
-body {
-  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-  
+:root {
+  --gill-sans: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 }
 
 a {
@@ -28,10 +27,11 @@ div#banner {
   flex-wrap: wrap;
 }
 
-span#title {
-  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-  font-size: 40px;
+#title {
+  font-family: var(--gill-sans);
+  font-size: 45px;
   margin-right: 10px;
+  font-weight: 550;
 }
 
 #title .code {
@@ -50,6 +50,8 @@ span#title {
   text-align: center;
   color: grey;
   display: inline-block;
+  font-family: var(--gill-sans);
+  font-size: 1.2em;
 }
 
 #new-repo-btn-container {

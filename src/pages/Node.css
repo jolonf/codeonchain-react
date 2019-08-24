@@ -1,3 +1,8 @@
+:root {
+  --mono-font: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+  --gill-sans: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
 
 #node-banner {
   background-color: #f3f5f5;
@@ -23,10 +28,15 @@ div#node-title {
   width: 600px;
   margin-right: auto;
   margin-left: 5px;
+  font-family: var(--gill-sans)
 }
 
 div#node-name {
-  font-size: 1.2em;
+  font-size: 1.5em;
+}
+
+span#node-name {
+  vertical-align: middle;
 }
 
 #node-version {
@@ -34,12 +44,23 @@ div#node-name {
   color: grey;
 }
 
-div#node-txid, div#node-publickey {
+.version-badge {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 5px;
+  padding-left: 5px;
+}
+
+div#node-txid {
   padding-top: 10px;
   padding-bottom: 20px;
-  font-family: monospace;
+  font-family: var(--mono-font);
   color: grey;
   font-size: 0.8em;
+}
+
+a#node-publickey {
+  color: grey;
 }
 
 div#money-button-container {
@@ -58,14 +79,44 @@ div#money-button-container {
   border-radius: 5px;
   margin-top: 20px;
   margin-bottom: 10px;
+  font-size: 1.1em;
+}
+
+.children-grid {
+  padding: 0px;
+}
+
+.children-row:first-child {
+  padding-top: 5px;
+}
+
+.children-row:last-child {
+  padding-bottom: 5px;
+}
+
+
+.children-row {
+  padding-left: 5px;
+}
+
+.children-row:hover {
+  background-color: #f3f5f5;
+}
+
+.child-link {
+  vertical-align: middle;
+}
+
+ion-icon {
+  vertical-align: middle;
+}
+
+.col-txid {
+  font-size: 0.8em;
 }
 
 .children-drag-highlight {
   background: #f3f5f5;
-}
-
-.children-drag-highlight * {
-  pointer-events: none;
 }
 
 #directory-buttons-container {
@@ -87,7 +138,7 @@ div#money-button-container {
   width: var(--width);
   max-width: 100%;
   margin: auto;
-  font-size: 0.8em;
+  font-size: 0.9em;
   color: grey;
   border: var(--border);
   border-radius: 5px;
@@ -100,7 +151,7 @@ div#money-button-container {
 }
 
 #clone input {
-  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+  font-family: var(--mono-font);
   font-size: 1em;
   color: grey;
   padding-top: 5px;
@@ -164,7 +215,7 @@ ion-button {
 }
 
 .monospace {
-  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+  font-family: var(--mono-font);
 }
 
 .grey {

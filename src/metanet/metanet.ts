@@ -105,7 +105,7 @@ export class Metanet {
     //console.log(json);
     const children = [] as MetanetNode[];
 
-    const items = json.u.concat(json.c);
+    const items = json.u.reverse().concat(json.c);
 
     for (const item of items) { 
       const metanetNode = new MetanetNode();
@@ -260,8 +260,17 @@ export class Metanet {
     }
   }
 
-  static async sendFileTrees(masterKey: any, fundingTxId: string, parent: MetanetNode, fileTrees: FileTree[], callback: Function) {
+  /**
+   * Returns array of all txIds sent.
+   * @param masterKey 
+   * @param fundingTxId 
+   * @param parent 
+   * @param fileTrees 
+   * @param callback 
+   */
+  static async sendFileTrees(masterKey: any, fundingTxId: string, parent: MetanetNode, fileTrees: FileTree[], callback: Function): Promise<string[]> {
     parent.spentVouts = [];
+    const txIds = [] as string[];
     for (const fileTree of fileTrees) {
       callback(fileTree.name);
       let metanetNode = parent.childWithName(fileTree.name);
@@ -287,12 +296,14 @@ export class Metanet {
           const folderTx = await this.folderTx(masterKey, fundingTxId, metanetNode);
           metanetNode.nodeTxId = folderTx.id;
           await this.send(folderTx);
-          await this.sendFileTrees(masterKey, fundingTxId, metanetNode, fileTree.children, callback);
+          txIds.push(...await this.sendFileTrees(masterKey, fundingTxId, metanetNode, fileTree.children, callback));
         }
+        txIds.push(metanetNode.nodeTxId);
       } else {
         console.log(`Child not found: ${fileTree.name}`);
       }
     }
+    return txIds;
   }
 
   static async sendBcatParts(masterKey: any, fundingTxId: string, metanetNode: MetanetNode, data: Buffer, callback: Function): Promise<string[]> {
@@ -525,6 +536,13 @@ The Money Button transaction is: ${fundingTxId}`;
   static async waitForTransactionToAppear(txId: string) {
     console.log(`Waiting for transaction to appear on network... (tx id: ${txId})`);
     while (!(await this.bitindex.tx.get(txId)).txid) {
+      await this.sleep(1000);
+    }
+  }
+
+  static async waitForTransactionToAppearOnPlanaria(txId: string) {
+    console.log(`Waiting for transaction to appear on Planaria... (tx id: ${txId})`);
+    while (!await this.getMetanetNode(txId)) {
       await this.sleep(1000);
     }
   }

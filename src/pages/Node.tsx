@@ -1,7 +1,7 @@
 import './Home.css';
 import './Node.css';
 
-import { IonContent, IonRow, IonCol, IonGrid, IonButton, IonIcon } from '@ionic/react';
+import { IonContent, IonRow, IonCol, IonGrid, IonButton, IonIcon, IonBadge } from '@ionic/react';
 import React, { useState } from 'react';
 import { RouteComponentProps, withRouter, Route, Link, Switch } from 'react-router-dom';
 import { document, folder } from 'ionicons/icons';
@@ -17,10 +17,10 @@ import { Repo } from '../metanet/repo';
 import Banner from '../components/Banner';
 import AddFilesModal from '../components/AddFilesModal';
 import NewFolderModal from '../components/NewFolderModal';
-import { FileTree } from '../metanet/FileTree';
 import Modal from '../components/Modal';
 import NodeAddressDetails from '../components/NodeAddressDetails';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
+import { FileTree } from '../metanet/FileTree';
 
 interface MatchParams {
   txId: string;
@@ -32,9 +32,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     children: [] as MetanetNode[],
     readme: '',
     fileData: null as (string | null), // File text or ObjectURL string
-    repo: null as (Repo | null),
-    newFolderModalOpen: false,
-    fileTrees: [] as FileTree[]
+    repo: null as (Repo | null)
   };
 
   state = this.initialState;
@@ -53,7 +51,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
               {this.state.metanetNode.nodeTxId &&
               <Clone metanetNode={metanetNode} />}
               {this.state.children.length > 0 &&
-              <Children metanetNode={this.state.metanetNode} children={this.state.children} onFilesDropped={(items: any) => this.onFilesDropped(items)}/>}
+              <Children metanetNode={this.state.metanetNode} children={this.state.children} />}
               {metanetNode.isDirectory && metanetNode.isDirectory() &&
               <DirectoryButtons />}
               <Readme text={this.state.readme} />
@@ -64,7 +62,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
                   <Switch location={this.props.location}>
 
                       <Route path={`${this.props.match.path}/add-files`} render={() => (
-                        <AddFilesModal onClose={() => this.props.history.push(this.props.match.url)} parent={metanetNode} fileTrees={this.state.fileTrees} />
+                        <AddFilesModal onClose={() => this.props.history.push(this.props.match.url)} onFilesAdded={() => this.onFilesAdded()} parent={metanetNode} />
                       )}/>
                       <Route path={`${this.props.match.path}/new-folder`} render={() => (
                         <NewFolderModal onClose={() => this.props.history.push(this.props.match.url)} parent={metanetNode} />
@@ -195,12 +193,11 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     this.props.history.push(this.props.match.url);
   }
 
-  async onFilesDropped(items: any) {
-    const fileTrees = await AddFilesModal.itemListToFileTrees(items);
-    this.setState({
-      fileTrees: fileTrees,
-      addFilesModalOpen: true
-    });
+  onFilesAdded() {
+    // Reload children
+    this.loadChildren(this.state.metanetNode);
+    // Close
+    this.props.history.push(this.props.match.url);
   }
 }
 
@@ -221,7 +218,7 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
   let version = null;
   let sponsor = null;
   if (repo) {
-    version = <span id='node-version'>{repo.version}</span>;
+    version = <IonBadge color='medium' className='version-badge'>{repo.version}</IonBadge>;
     if (repo.sponsor && repo.sponsor.to) {
       sponsor = <MoneyButton {...repo.sponsor} editable={true} />;
     }
@@ -231,7 +228,9 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
     <div id='node-banner'>
       <div id='node-banner-display'>
         <div id='node-title'>
-          <div id='node-name'>{backButton} <span id='node-name'>{metanetNode.name} {metanetNode.isDirectory && metanetNode.isDirectory() && (metanetNode.parentTxId !== 'NULL') && ' /'}</span> {version}</div>
+          <div id='node-name'>
+            <span id='node-name'> {backButton} {metanetNode.name} {metanetNode.isDirectory && metanetNode.isDirectory() && (metanetNode.parentTxId !== 'NULL') && ' /'} {version}</span>
+          </div>
           <div id='node-txid'>
               <Link id='node-publickey' to={`${match.url}/details`}>{metanetNode.nodeAddress}</Link><br />
               <span id='node-txid'>{metanetNode.nodeTxId}</span>
@@ -248,27 +247,17 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
 interface ChildrenProps extends RouteComponentProps {
   metanetNode: MetanetNode;
   children: MetanetNode[];
-  onFilesDropped: Function;
 }
-const Children = withRouter<ChildrenProps>(({metanetNode, children, onFilesDropped}) => {
+const Children = withRouter<ChildrenProps>(({metanetNode, children, history, match}) => {
 
   const [highlight, setHighlight] = useState(false);
 
-  function onDragEnter(e: React.DragEvent<HTMLDivElement>) {
-    e.stopPropagation();
-    e.preventDefault();
-    setHighlight(true);
-  }
-
   function onDragOver(e: React.DragEvent<HTMLDivElement>) {
-    e.stopPropagation();
     e.preventDefault();
     setHighlight(true);
   }
 
   function onDragLeave(e: React.DragEvent<HTMLDivElement>) {
-    e.stopPropagation();
-    e.preventDefault();
     setHighlight(false);
   }
 
@@ -277,7 +266,13 @@ const Children = withRouter<ChildrenProps>(({metanetNode, children, onFilesDropp
     e.preventDefault();
     setHighlight(false);
     if (e.dataTransfer.items) {
-      onFilesDropped(e.dataTransfer.items);
+      const fileTrees = await FileTree.itemListToFileTrees(e.dataTransfer.items);
+      if (fileTrees.length > 0) {
+        history.push({
+          pathname: `${match.url}/add-files`,
+          state: {fileTrees: fileTrees}
+        });
+      }
     }
   }
 
@@ -285,19 +280,21 @@ const Children = withRouter<ChildrenProps>(({metanetNode, children, onFilesDropp
     const icon = child.isDirectory() ? folder : document;
     child.parent = metanetNode;
     return (
-      <IonRow key={index}>
-        <IonCol size='4'><IonIcon icon={icon}/> <Link to={{pathname: '/tx/' + child.nodeTxId, state: {node: child}}}>{child.name}</Link></IonCol>
-        <IonCol class='monospace' size='8'>{child.nodeTxId}</IonCol>
+      <IonRow key={index} className='children-row'>
+        <IonCol size='3' className='col-name'><IonIcon icon={icon}/> <Link className='child-link' to={{pathname: '/tx/' + child.nodeTxId, state: {node: child}}}>{child.name}</Link></IonCol>
+        <IonCol class='monospace' size='7' className='col-txid'>{child.nodeTxId}</IonCol>
       </IonRow>
     );
   });
 
   return (
-    <div id='children-container' className={highlight ? 'children-drag-highlight' : ''} onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDragOver={onDragOver} onDrop={onDrop}>
-      <IonGrid>
-        {rows}
-      </IonGrid>
-    </div>
+    <>
+      <div id='children-container' className={highlight ? 'children-drag-highlight' : ''} onDragLeave={onDragLeave} onDragOver={onDragOver} onDrop={onDrop}>
+        <IonGrid className='children-grid'>
+          {rows}
+        </IonGrid>
+      </div>
+    </>
   );
 });
 
@@ -315,13 +312,14 @@ interface CloneProps extends RouteComponentProps {
   metanetNode: MetanetNode;
 }
 const Clone = withRouter<CloneProps>(({metanetNode}) => {
-  return (
+  return null;
+  /*return (
     <div id='clone-container'>
       <div id='clone'>
         Clone using <a href="https://github.com/jolonf/bsvpush">bsvpush</a>: <input type='text' readOnly value={'bsvpush clone ' + metanetNode.nodeTxId} />
       </div>
     </div>
-  );
+  );*/
 });
 
 interface ReadmeProps extends RouteComponentProps {
