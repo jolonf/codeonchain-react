@@ -9,8 +9,8 @@ import './Modal.css';
 import '../theme/variables.scss';
 import { Metanet } from "../metanet/metanet";
 import { IonButton } from "@ionic/react";
-import { MetanetNode } from "../metanet/metanet_node";
-import { MasterKeyStorage } from "../storage/MasterKeyStorage";
+import { MetanetNode } from "../metanet/metanet-node";
+import { MasterKeyStorage } from "../storage/master-key-storage";
 
 interface NewFolderProps {
   onClose: Function;

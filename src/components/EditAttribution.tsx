@@ -2,7 +2,7 @@ import './EditAttribution.css';
 
 import React from "react";
 import { IonCard, IonButton, IonInput, IonCardContent, IonCardHeader, IonCardTitle, IonCheckbox, IonLabel, IonAlert } from "@ionic/react";
-import { Attribution } from '../storage/Attribution';
+import { Attribution } from '../storage/attribution';
 
 interface EditAttributionProps {
   onClose: Function;

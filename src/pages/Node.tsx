@@ -1,28 +1,29 @@
-import './Home.css';
 import './Node.css';
 
-import { IonContent, IonRow, IonCol, IonGrid, IonButton, IonIcon } from '@ionic/react';
-import React, { useState } from 'react';
-import { RouteComponentProps, withRouter, Route, Link, Switch } from 'react-router-dom';
+import { IonContent, IonButton, IonIcon } from '@ionic/react';
+import React from 'react';
+import { RouteComponentProps, withRouter, Route, Switch } from 'react-router-dom';
 import { document, folder, link, cloudDownload } from 'ionicons/icons';
 
 import showdown from 'showdown';
-import MoneyButton from '@moneybutton/react-money-button';
 
 import { Metanet } from '../metanet/metanet';
-import { MetanetNode } from '../metanet/metanet_node';
+import { MetanetNode } from '../metanet/metanet-node';
 import { BProtocol } from '../protocols/b.protocol';
 import { BcatProtocol } from '../protocols/bcat.protocol';
 import { Repo } from '../metanet/repo';
 import Banner from '../components/Banner';
+import NodeBanner from '../components/NodeBanner';
 import AddFilesModal from '../components/AddFilesModal';
 import NewFolderModal from '../components/NewFolderModal';
 import Modal from '../components/Modal';
 import NodeAddressDetails from '../components/NodeAddressDetails';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
-import { FileTree } from '../metanet/FileTree';
+import NodeChildren from '../components/NodeChildren';
+import FileData from '../components/FileData';
 import NewLinkModal from '../components/NewLinkModal';
 import Download from '../components/Download';
+import { DirectoryProtocol } from '../protocols/directory.protocol';
 
 interface MatchParams {
   txId: string;
@@ -51,7 +52,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
             {metanetNode &&
             <>
               {this.state.children.length > 0 &&
-              <Children metanetNode={this.state.metanetNode} children={this.state.children} />}
+              <NodeChildren metanetNode={this.state.metanetNode} children={this.state.children} />}
               {metanetNode.isDirectory && metanetNode.isDirectory() &&
               <DirectoryButtons />}
               <Readme text={this.state.readme} />
@@ -113,6 +114,12 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     if (this.props.location.state && this.props.location.state.node) {
       parent = this.props.location.state.node.parent;
       this.setState({metanetNode: this.props.location.state.node});
+      // If the node is a link to a directory then redirect to the link
+      if (this.props.location.state.node.link
+          && this.props.location.state.node.link.protocolHints.includes(DirectoryProtocol.address)) {
+        this.props.history.replace(`/tx/${this.props.location.state.node.link.txId}`);
+        return;
+      }
     } else {
       this.setState({metanetNode: new MetanetNode()});
     }
@@ -124,13 +131,19 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
 
     metanetNode.parent = parent;
     this.setState({metanetNode: metanetNode});
+    // If the node is a link to a directory then redirect to the link
+    if (metanetNode.link
+      && metanetNode.link.protocolHints.includes(DirectoryProtocol.address)) {
+      this.props.history.replace(`/tx/${metanetNode.link.txId}`);
+      return;
+    }
+
     this.loadChildren(metanetNode);
     this.loadFile(metanetNode);
   }
 
   async loadChildren(metanetNode: MetanetNode) {
-    metanetNode.children = await Metanet.getChildren(metanetNode.nodeAddress, metanetNode.nodeTxId);
-    this.setState({children: metanetNode.children});
+    this.setState({children: await metanetNode.loadChildren()});
 
     if (metanetNode.children.length > 0) {
       const readmeNode = metanetNode.children.find(c => c.name.toLowerCase() === 'readme.md')
@@ -163,12 +176,10 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
   }
 
   async loadFile(metanetNode: MetanetNode) {
-    //console.log(`mime type = ${metanetNode.mimeType}`);
-
-    const protocol = (metanetNode.link && metanetNode.link.protocolHint) || metanetNode.protocol;
+    const protocols = (metanetNode.link && metanetNode.link.protocolHints) || [metanetNode.protocol];
     const txId = (metanetNode.link && metanetNode.link.txId) || metanetNode.nodeTxId;
 
-    if (protocol === BProtocol.address || protocol === BcatProtocol.address) {
+    if (protocols.includes(BProtocol.address) || protocols.includes(BcatProtocol.address)) {
       if (metanetNode.mimeType.startsWith('video')) {
         this.setState({fileData: `https://bico.media/${txId}`});
       } else {
@@ -181,17 +192,14 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
         }
 
         if (metanetNode.mimeType === 'image/svg+xml') {
-          console.log('svg data');
+          // SVG
           this.setState({fileData: (buffer && buffer.toString()) || metanetNode.dataString});
         } else if (metanetNode.mimeType.startsWith('image/')) {
-          console.log('img data');
           // Image
           const blob = new Blob([buffer || Buffer.from(metanetNode.dataBase64, 'base64').buffer]);
           const url = URL.createObjectURL(blob);
           this.setState({fileData: url});
         } else {
-          console.log('text data');
-          console.log(`encoding: ${metanetNode.encoding}`);
           // Text
           this.setState({fileData: (buffer && buffer.toString()) || metanetNode.dataString});
         }
@@ -200,8 +208,6 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
   }
 
   onCloseNodeAddressDetailsModal() {
-    // The match URL doesn't contain any child routes so to go to the parent
-    // which is this object we just go to the match URL
     this.props.history.push(this.props.match.url);
   }
 
@@ -212,114 +218,6 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     this.props.history.push(this.props.match.url);
   }
 }
-
-interface NodeBannerProps extends RouteComponentProps {
-  metanetNode: MetanetNode;
-  repo: Repo | null;
-}
-const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
-
-  let backButton = null;
-  if (metanetNode.parentTxId && metanetNode.parentTxId !== 'NULL') {
-    backButton = (
-    <>
-      <Link to={{pathname: '/tx/' + metanetNode.parentTxId, state: {node: metanetNode.parent}}} id='parent-back'>{metanetNode.parent ? `${metanetNode.parent.name}` :'<'}</Link> {metanetNode.parent && ' /'}
-    </>);
-  }
-
-  let version = null;
-  let github = null;
-  let sponsor = null;
-  if (repo) {
-    if (repo.version) {
-      version = <img className='version-badge' alt={repo.version} src={`https://img.shields.io/badge/-${repo.version}-lightgrey`}/>;
-    }
-    if (repo.github) {
-      github = <a href={repo.github}><img className='version-badge' alt='github' src={`https://img.shields.io/badge/-github-yellow`}/></a>;
-    }
-    if (metanetNode.isRoot() && repo.sponsor && repo.sponsor.to) {
-      console.log(repo.sponsor);
-      sponsor = <MoneyButton {...repo.sponsor} editable={true} />;
-    }
-  }
-
-  return (
-    <div id='node-banner'>
-      <div id='node-banner-display'>
-        <div id='node-title'>
-          <div id='node-name'>
-            <span id='node-name'> {backButton} {metanetNode.name} {metanetNode.isDirectory && metanetNode.isDirectory() && (metanetNode.parentTxId !== 'NULL') && ' /'} {version}{github}</span>
-          </div>
-          <div id='node-txid'>
-              <Link id='node-publickey' to={`${match.url}/details`}>{metanetNode.nodeAddress}</Link><br />
-              <span id='node-txid'>{metanetNode.nodeTxId}</span>
-          </div>
-        </div>
-        <div id='money-button-container'>
-          {sponsor}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-interface ChildrenProps extends RouteComponentProps {
-  metanetNode: MetanetNode;
-  children: MetanetNode[];
-}
-const Children = withRouter<ChildrenProps>(({metanetNode, children, history, match}) => {
-
-  const [highlight, setHighlight] = useState(false);
-
-  function onDragOver(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault();
-    setHighlight(true);
-  }
-
-  function onDragLeave(e: React.DragEvent<HTMLDivElement>) {
-    setHighlight(false);
-  }
-
-  async function onDrop(e: React.DragEvent<HTMLDivElement>) {
-    e.stopPropagation();
-    e.preventDefault();
-    setHighlight(false);
-    if (e.dataTransfer.items) {
-      const fileTrees = await FileTree.itemListToFileTrees(e.dataTransfer.items);
-      if (fileTrees.length > 0) {
-        history.push({
-          pathname: `${match.url}/add-files`,
-          state: {fileTrees: fileTrees}
-        });
-      }
-    }
-  }
-
-  const rows = children.map((child, index) => {
-    const icon = child.isDirectory() ? folder : document;
-    child.parent = metanetNode;
-    return (
-      <IonRow key={index} className='children-row'>
-        <IonCol size='3' className='col-name'>
-          <IonIcon icon={icon} color={child.isLink() ? 'primary': 'medium'}/> <Link className={`child-link ${child.isLink() && 'italic'}`} to={{pathname: '/tx/' + child.nodeTxId, state: {node: child}}}>{child.name}</Link> 
-          {child.isLink() && <IonIcon icon={link.ios}/>}
-        </IonCol>
-        <IonCol class='monospace' size='7'><span className='col-txid'>{child.nodeTxId}</span></IonCol>
-      </IonRow>
-    );
-  });
-
-  return (
-    <>
-      <div id='children-container' className={highlight ? 'children-drag-highlight' : ''} onDragLeave={onDragLeave} onDragOver={onDragOver} onDrop={onDrop}>
-        <IonGrid className='children-grid'>
-          {rows}
-        </IonGrid>
-      </div>
-    </>
-  );
-});
-
 
 const DirectoryButtons = withRouter(({match}) => {
   return (
@@ -342,53 +240,5 @@ const Readme = withRouter<ReadmeProps>(({text}) => {
 
   return <div id="readme" dangerouslySetInnerHTML={{__html: text}}></div>;
 });
-
-interface FileDataProps extends RouteComponentProps {
-  metanetNode: MetanetNode;
-  data: string | null;
-}
-const FileData = withRouter<FileDataProps>(({metanetNode, data}) => {
-  if (!data) {
-    return null;
-  }
-
-  let fileText = null;
-  let img = null;
-  let svg = null;
-  let video = null;
-
-  if (data) {
-    if (metanetNode.mimeType.startsWith('video') || metanetNode.mimeType.startsWith('audio')) {
-      video = <div className='video-container'>
-        <video controls src={data} />
-      </div>
-    } else if (metanetNode.mimeType === 'image/svg+xml') {
-      svg = (
-        <div id='svg-data' dangerouslySetInnerHTML={{__html: data}}>
-        </div>
-      );
-    } else if (metanetNode.mimeType.startsWith('image/')) {
-      img = (
-        <div id='img-data-container'>
-            <img id="img-data" src={data} alt={metanetNode.name} />
-        </div>
-      );
-    } else {
-      fileText = (
-        <pre id='text'>{data}</pre>
-      );
-    }
-  }
-
-  return (
-    <div id='file-data'>
-      {fileText}
-      {img}
-      {svg}
-      {video}
-    </div>
-  );
-});
-
 
 export default NodePage;

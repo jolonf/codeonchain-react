@@ -9,10 +9,10 @@ import '../theme/variables.scss';
 import './Modal.css';
 import { Metanet, METANET_FLAG } from "../metanet/metanet";
 import { DirectoryProtocol } from '../protocols/directory.protocol';
-import { DerivationPathProtocol } from '../protocols/derivation_path.protocol';
+import { DerivationPathProtocol } from '../protocols/derivation-path.protocol';
 import { IonButton } from "@ionic/react";
-import { MetanetNode } from "../metanet/metanet_node";
-import { MasterKeyStorage } from "../storage/MasterKeyStorage";
+import { MetanetNode } from "../metanet/metanet-node";
+import { MasterKeyStorage } from "../storage/master-key-storage";
 import { RouteComponentProps, withRouter } from "react-router";
 
 interface NewRepoProps extends RouteComponentProps {

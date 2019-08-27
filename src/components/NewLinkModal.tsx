@@ -6,7 +6,7 @@ import { withRouter, RouteComponentProps } from "react-router";
 
 import React, { useCallback } from 'react';
 import UploadModal from './UploadModal';
-import { MetanetNode } from "../metanet/metanet_node";
+import { MetanetNode } from "../metanet/metanet-node";
 import { useState } from "react";
 import { IonLabel } from "@ionic/react";
 import { Metanet } from "../metanet/metanet";
@@ -32,7 +32,8 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
     description: '',
     address: '',
     name: '',
-    mimeType: ''
+    mimeType: '',
+    protocols: [] as string[]
   });
   const [uploadButtonDisabled, setUploadButtonDisabled] = useState(true);
   const [progressBarValue, setProgressBarValue] = useState(0);
@@ -89,7 +90,8 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
         name = fileProtocol.name;
         mimeType = fileProtocol.mimeType;
       }
-      setTxInfo({ description, address, name, mimeType });
+      const protocolAddresses = protocols.map(p => p.constructor.address);
+      setTxInfo({ description, address, name, mimeType, protocols: protocolAddresses });
       setFileName(name);
     }
   };
@@ -121,7 +123,7 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
       // so that the .bsvignore and bsvpush.json files can be created
       const masterKey = bsv.HDPrivateKey(xprv);
       const metanetNode = parent.childOrCreate(fileName, masterKey);
-      const linkASM = LinkProtocol.toASM(txId, fileName, txInfo.address, txInfo.mimeType);
+      const linkASM = LinkProtocol.toASM(txId, fileName, txInfo.protocols, txInfo.mimeType);
       await Metanet.createTx(masterKey, null, metanetNode, linkASM);
       const fee = metanetNode.fee;
       console.log(`Fee: ${fee}`);
@@ -150,7 +152,6 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
         await Metanet.waitForUnconfirmedParents(fundingTxId, (message: string) => setMessage(message));
 
         parent.spentVouts = [];
-        console.log('xprv', xprv);
         const masterKey = bsv.HDPrivateKey(xprv);
         const tx = await Metanet.createTx(masterKey, fundingTxId, metanetNode, linkASM);
         const response = await Metanet.send(tx);

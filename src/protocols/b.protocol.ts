@@ -1,4 +1,4 @@
-import { MetanetNode } from "../metanet/metanet_node";
+import { MetanetNode } from "../metanet/metanet-node";
 import { Cell, Metanet } from "../metanet/metanet";
 
 /**

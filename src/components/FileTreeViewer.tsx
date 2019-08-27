@@ -1,6 +1,6 @@
 import React from "react";
 
-import { FileTree } from '../metanet/FileTree';
+import { FileTree } from '../metanet/file-tree';
 import { IonIcon } from "@ionic/react";
 import { folder, document } from "ionicons/icons";
 

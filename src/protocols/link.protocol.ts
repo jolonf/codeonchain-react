@@ -1,5 +1,5 @@
 import { Metanet, Cell } from "../metanet/metanet";
-import { MetanetNode } from "../metanet/metanet_node";
+import { MetanetNode } from "../metanet/metanet-node";
 
 
 export class LinkProtocol {
@@ -8,16 +8,17 @@ export class LinkProtocol {
 
   txId = '';
   name = '';
-  protocolHint = '';
   mimeType = '';
+  protocolHints = [] as string[];
 
   static fromCell(cell: Cell[]): LinkProtocol {
     const link = new LinkProtocol();
     link.txId         = cell[1].s;
     link.name         = cell[2].s;
-    link.protocolHint = cell[3].s;
-    link.mimeType     = cell[4].s;
-
+    link.mimeType     = cell[3].s;
+    for (let i = 4; i < cell.length; i++) {
+      link.protocolHints.push(cell[i].s);
+    }
     if (link.mimeType && link.mimeType.trim() === '') {
       link.mimeType = Metanet.guessMimeType(link.name);
     }
@@ -25,13 +26,13 @@ export class LinkProtocol {
     return link;
   }
 
-  static toASM(txId: string, name: string, protocolHint = ' ', mimeType = ' ') {
+  static toASM(txId: string, name: string, protocolHints = [] as string[], mimeType = ' ') {
     return [
       this.address, // Link
       txId,
       name,
-      protocolHint,
-      mimeType
+      mimeType,
+      ...protocolHints
     ];
   }
 

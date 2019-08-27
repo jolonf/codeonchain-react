@@ -7,10 +7,10 @@ import { withRouter, RouteComponentProps, Switch, Route } from "react-router";
 import Modal from "./Modal";
 import { useState } from "react";
 import { IonButton, IonProgressBar } from "@ionic/react";
-import { MetanetNode } from '../metanet/metanet_node';
+import { MetanetNode } from '../metanet/metanet-node';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import EditAttribution from './EditAttribution';
-import { MasterKeyStorage } from '../storage/MasterKeyStorage';
+import { MasterKeyStorage } from '../storage/master-key-storage';
 
 
 interface UploadModalProps extends RouteComponentProps {

@@ -4,13 +4,13 @@ import { readAsArrayBuffer } from 'promise-file-reader';
 import { Buffer } from 'buffer';
 //import { inflate } from 'pako';
 
-import { MetanetNode } from "./metanet_node";
+import { MetanetNode } from "./metanet-node";
 import { BProtocol } from '../protocols/b.protocol';
 import { BcatPartProtocol } from '../protocols/bcat-part.protocol';
-import { DerivationPathProtocol } from '../protocols/derivation_path.protocol';
+import { DerivationPathProtocol } from '../protocols/derivation-path.protocol';
 import { MetanetProtocol } from '../protocols/metanet.protocol';
 import { DirectoryProtocol } from '../protocols/directory.protocol';
-import { FileTree } from './FileTree';
+import { FileTree } from './file-tree';
 import { BcatProtocol } from '../protocols/bcat.protocol';
 import { LinkProtocol } from '../protocols/link.protocol';
 

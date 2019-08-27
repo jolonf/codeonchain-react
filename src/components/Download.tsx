@@ -3,7 +3,7 @@ import './Download.css';
 import React from "react";
 import JSZip  from 'jszip';
 import FileSaver from 'file-saver';
-import { MetanetNode } from "../metanet/metanet_node";
+import { MetanetNode } from "../metanet/metanet-node";
 import { IonButton, IonIcon } from '@ionic/react';
 import { Metanet } from '../metanet/metanet';
 import { download } from 'ionicons/icons';

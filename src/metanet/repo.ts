@@ -1,4 +1,4 @@
-import { MetanetNode } from "./metanet_node";
+import { MetanetNode } from "./metanet-node";
 
 export class Repo extends MetanetNode {
   description = '';

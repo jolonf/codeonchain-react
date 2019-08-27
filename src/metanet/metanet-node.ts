@@ -1,5 +1,6 @@
 import { DirectoryProtocol } from "../protocols/directory.protocol";
 import { LinkProtocol } from '../protocols/link.protocol';
+import { Metanet } from "./metanet";
 
 export class MetanetNode {
   nodeAddress = '';
@@ -19,9 +20,11 @@ export class MetanetNode {
   partTxIds = [] as string[]; // Parts for Bcat
   link = null as LinkProtocol | null;
 
+  // Used during fee estimation
   fee = 0;
   partFees = [] as number[]; // If this node has related txs (e.g. Bcat parts)
 
+  // Used during sending to track used utxos
   spentVouts = [] as number[];
 
   constructor(parentTxId = '', masterKey: any | null = null, derivationPath: string = '', name = '') {
@@ -39,6 +42,10 @@ export class MetanetNode {
 
   isLink(): boolean {
     return !!this.link;
+  }
+
+  isLinkToDirectory(): boolean {
+    return !!this.link && this.link.protocolHints.includes(DirectoryProtocol.address);
   }
 
   isRoot(): boolean {
@@ -75,5 +82,13 @@ export class MetanetNode {
     }
 
     return child;
+  }
+
+  /**
+   * Loads, sets, and returns children.
+   */
+  async loadChildren(): Promise<MetanetNode[]> {
+    this.children = await Metanet.getChildren(this.nodeAddress, this.nodeTxId);
+    return this.children;
   }
 }

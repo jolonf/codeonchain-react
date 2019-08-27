@@ -1,9 +1,9 @@
 
 import React from "react";
 import { IonButton, IonProgressBar, IonSpinner } from "@ionic/react";
-import { MetanetNode } from "../metanet/metanet_node";
+import { MetanetNode } from "../metanet/metanet-node";
 import { Metanet } from "../metanet/metanet";
-import { MasterKeyStorage } from "../storage/MasterKeyStorage";
+import { MasterKeyStorage } from "../storage/master-key-storage";
 
 import bsv from 'bsv';
 

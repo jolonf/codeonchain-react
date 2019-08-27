@@ -9,12 +9,12 @@ import './Modal.css';
 import './AddFilesModal.css';
 import '../theme/variables.scss';
 import { Metanet } from "../metanet/metanet";
-import { FileTree } from "../metanet/FileTree"; 
+import { FileTree } from "../metanet/file-tree"; 
 import { FileTreeViewer } from './FileTreeViewer';
 import { IonButton, IonIcon, IonProgressBar, IonCheckbox } from "@ionic/react";
-import { MetanetNode } from "../metanet/metanet_node";
+import { MetanetNode } from "../metanet/metanet-node";
 import { cloudUpload } from "ionicons/icons";
-import { MasterKeyStorage } from "../storage/MasterKeyStorage";
+import { MasterKeyStorage } from "../storage/master-key-storage";
 import { RouteComponentProps, withRouter, Switch, Route } from "react-router";
 import { TransitionGroup, CSSTransition } from "react-transition-group";
 

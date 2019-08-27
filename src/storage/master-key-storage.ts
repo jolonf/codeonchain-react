@@ -1,5 +1,5 @@
 import bsv from 'bsv';
-import { MetanetNode } from '../metanet/metanet_node';
+import { MetanetNode } from '../metanet/metanet-node';
 import { Metanet } from '../metanet/metanet';
 
 export interface MasterKeyEntry {
