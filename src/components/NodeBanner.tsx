@@ -6,6 +6,8 @@ import { Link } from "react-router-dom";
 
 import { MetanetNode } from '../metanet/metanet-node';
 import { Repo } from '../metanet/repo';
+import { IonIcon } from '@ionic/react';
+import { link } from 'ionicons/icons';
 
 interface NodeBannerProps extends RouteComponentProps {
   metanetNode: MetanetNode;
@@ -19,6 +21,16 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
     <>
       <Link to={{pathname: '/tx/' + metanetNode.parentTxId, state: {node: metanetNode.parent}}} id='parent-back'>{metanetNode.parent ? `${metanetNode.parent.name}` :'<'}</Link> {metanetNode.parent && ' /'}
     </>);
+  }
+
+  let nodeName = <>{metanetNode.name}</>;
+
+  if (metanetNode.link) {
+    if (metanetNode.isLinkToMetanet && metanetNode.isLinkToMetanet()) {
+      nodeName = <Link to={{pathname: '/tx/' + metanetNode.link.txId}}>{metanetNode.name}</Link>;
+    } else {
+      nodeName = <a href={`https://whatsonchain.com/tx/${metanetNode.link.txId}`} target='_blank' rel='noopener noreferrer'>{metanetNode.name}</a>;
+    }
   }
 
   let version = null;
@@ -42,7 +54,7 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
       <div id='node-banner-display'>
         <div id='node-title'>
           <div id='node-name'>
-            <span id='node-name'> {backButton} {metanetNode.name} {metanetNode.isDirectory && metanetNode.isDirectory() && (metanetNode.parentTxId !== 'NULL') && ' /'} {version}{github}</span>
+            <span id='node-name'> {backButton} {nodeName} {metanetNode.isDirectory && metanetNode.isDirectory() && (metanetNode.parentTxId !== 'NULL') && ' /'} {metanetNode.link && <IonIcon icon={link.ios} />} {version}{github}</span>
           </div>
           <div id='node-txid'>
               <Link id='node-publickey' to={`${match.url}/details`}>{metanetNode.nodeAddress}</Link><br />

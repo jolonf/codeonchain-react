@@ -1,6 +1,7 @@
 import { DirectoryProtocol } from "../protocols/directory.protocol";
 import { LinkProtocol } from '../protocols/link.protocol';
 import { Metanet } from "./metanet";
+import { MetanetProtocol } from "../protocols/metanet.protocol";
 
 export class MetanetNode {
   nodeAddress = '';
@@ -42,6 +43,10 @@ export class MetanetNode {
 
   isLink(): boolean {
     return !!this.link;
+  }
+
+  isLinkToMetanet(): boolean {
+    return !!this.link && this.link.protocolHints.includes(MetanetProtocol.address);
   }
 
   isLinkToDirectory(): boolean {
