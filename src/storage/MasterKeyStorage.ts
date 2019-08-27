@@ -1,4 +1,6 @@
 import bsv from 'bsv';
+import { MetanetNode } from '../metanet/metanet_node';
+import { Metanet } from '../metanet/metanet';
 
 export interface MasterKeyEntry {
   masterKey: string; // xpriv
@@ -52,6 +54,22 @@ export class MasterKeyStorage {
       if (masterKeysJson) {
         const masterKeys = JSON.parse(masterKeysJson);
         return masterKeys.find((entry: MasterKeyEntry) => entry.publicAddress === publicAddress);
+      }
+    }
+  }
+
+  /**
+   * Gets the root of the child and then the master key entry.
+   * @param child 
+   */
+  static async getMasterKeyEntryForChild(child: MetanetNode): Promise<MasterKeyEntry | undefined> {
+    const root = await Metanet.getRoot(child);
+    if (root && window.localStorage) {
+      let masterKeysJson = window.localStorage.masterKeys;
+
+      if (masterKeysJson) {
+        const masterKeys = JSON.parse(masterKeysJson);
+        return masterKeys.find((entry: MasterKeyEntry) => entry.publicAddress === root.nodeAddress);
       }
     }
   }

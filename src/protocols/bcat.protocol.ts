@@ -8,8 +8,36 @@ import { Buffer } from 'buffer';
  */
 export class BcatProtocol {
   static address = '15DHFxWZJT58f9nhyGnsRBqrgwK4W6h4Up';
+  static description = 'B://cat file';
 
-  static from(partTxIds: string[], fileName: string, info = ' ', mimeType = ' ', encoding = ' ', flag = ' ') {
+  info  = '';
+  mimeType    = '';
+  encoding    = '';
+  name        = '';
+  txIds       = [] as string[];
+
+  static fromCell(cell: Cell[]): BcatProtocol {
+    const bcatProtocol = new BcatProtocol();
+    bcatProtocol.info        = cell[1].s;
+    bcatProtocol.mimeType    = cell[2].s;
+    bcatProtocol.encoding    = cell[3].s;
+    bcatProtocol.name        = cell[4].s;
+
+    bcatProtocol.txIds = [];
+    for (let i = 6; i < cell.length; i++) {
+      const base64 = cell[i].b || cell[i].lb;
+      const buffer = Buffer.from(base64, 'base64');
+      bcatProtocol.txIds.push(buffer.toString('hex'));
+    }
+
+    if (bcatProtocol.mimeType && bcatProtocol.mimeType.trim() === '') {
+      bcatProtocol.mimeType = Metanet.guessMimeType(bcatProtocol.name);
+    }
+
+    return bcatProtocol;
+  }
+
+  static toASM(partTxIds: string[], fileName: string, info = ' ', mimeType = ' ', encoding = ' ', flag = ' ') {
     return [
       this.address,
       info,
@@ -17,7 +45,7 @@ export class BcatProtocol {
       encoding,
       fileName,
       flag,
-      ...partTxIds
+      ...partTxIds.map(txId => Buffer.from(txId, 'hex'))
     ];
   }
 
@@ -29,8 +57,10 @@ export class BcatProtocol {
     const txIds = [] as string[];
     for (let i = 6; i < cell.length; i++) {
       const base64 = cell[i].b || cell[i].lb;
-      const buffer = Buffer.from(base64, 'base64');
-      txIds.push(buffer.toString('hex'));
+      if (base64) {
+        const buffer = Buffer.from(base64, 'base64');
+        txIds.push(buffer.toString('hex'));
+      }
     }
     metanetNode.partTxIds = txIds;
 

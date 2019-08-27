@@ -1,0 +1,24 @@
+:root {
+  --mono-font: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+  --gill-sans: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+.monospace {
+  font-family: var(--mono-font);
+}
+
+#txid-input {
+  width: 90%;
+}
+
+#name-input {
+  width: 90%;
+}
+
+.center {
+  text-align: center;
+}
+
+.label {
+  font-weight: bold;
+}

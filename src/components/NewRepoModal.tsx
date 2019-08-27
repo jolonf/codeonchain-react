@@ -29,6 +29,7 @@ class NewRepoModal extends React.Component<NewRepoProps> {
     description: '',
     author: '',
     version: '',
+    github: '',
     sponsor: '',
     hidden: false,
     moneyButtonDisabled: true,
@@ -64,8 +65,9 @@ class NewRepoModal extends React.Component<NewRepoProps> {
             <legend>Required</legend>
             <div className='form-grid'>
               <div className='label'>Master key: </div>
-              <div><input type='text' id='repo-master-key' size={64} readOnly value={this.state.masterKey.xprivkey} /><br />
-              <label><input type='checkbox' defaultChecked={this.state.storeMasterKey} id='store-master-key' onChange={(e) => this.onStoreMasterKeyChanged(e)}/> Store master key in local storage.</label><br/>
+              <div><input type='text' id='repo-master-key' size={64} readOnly value={this.state.masterKey.xprivkey} /></div>
+              <div/>
+              <div><input type='checkbox' defaultChecked={this.state.storeMasterKey} id='store-master-key' onChange={(e) => this.onStoreMasterKeyChanged(e)}/><label htmlFor='store-master-key'> Store master key in local storage.</label><br/>
               <span className='input-note'>You must keep a copy of the master key to be able to make future changes to the repo.</span></div>
               
               <div className='label'>Repository Name: </div>
@@ -86,12 +88,15 @@ class NewRepoModal extends React.Component<NewRepoProps> {
               
               <div className='label'>Version: </div>
               <div><input type='text' id='repo-version' onChange={(e) => this.onVersionChanged(e)} defaultValue='0.0.1' size={80} /></div>
-              
+
+              <div className='label'>GitHub: </div>
+              <div><input type='text' id='repo-github' onChange={(e) => this.onGitHubChanged(e)} placeholder='e.g. http://github.com/<username>' size={80} /></div>
+                            
               <div className='label'>Sponsor: </div>
-              <div><input type='text' id='repo-sponsor' onChange={(e) => this.onSponsorChanged(e)} placeholder='Paymail, BSV address, or MoneyButton id (Optional)' size={80} /></div>
+              <div><input type='text' id='repo-sponsor' onChange={(e) => this.onSponsorChanged(e)} placeholder='Paymail, BSV address, or MoneyButton id' size={80} /></div>
               
               <div className='label hidden'>Hidden: </div>
-              <div className='hidden'><label className='checkbox-input'><input type='checkbox' id='repo-hidden' onChange={(e) => this.onHiddenChanged(e)} /> Hide from listing on Codeonchain</label></div>
+              <div className='hidden'><input type='checkbox' id='repo-hidden' onChange={(e) => this.onHiddenChanged(e)} /><label className='checkbox-input' htmlFor='repo-hidden'> Hide from listing on Codeonchain</label></div>
 
             </div>
           </fieldset>
@@ -157,6 +162,10 @@ class NewRepoModal extends React.Component<NewRepoProps> {
     this.setState({version: e.target.value});
     this.setState({moneyButtonDisabled: true});
   }
+  onGitHubChanged(e: React.ChangeEvent<HTMLInputElement>) {
+    this.setState({github: e.target.value});
+    this.setState({moneyButtonDisabled: true});
+  }
   onSponsorChanged(e: React.ChangeEvent<HTMLInputElement>) {
     this.setState({sponsor: e.target.value});
     this.setState({moneyButtonDisabled: true});
@@ -181,6 +190,7 @@ class NewRepoModal extends React.Component<NewRepoProps> {
         description: this.state.description,
         author: this.state.author,
         version: this.state.version,
+        github: this.state.github,
         sponsor: {to: this.state.sponsor},
         hidden: this.state.hidden,
         test: true

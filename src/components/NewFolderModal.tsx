@@ -14,6 +14,7 @@ import { MasterKeyStorage } from "../storage/MasterKeyStorage";
 
 interface NewFolderProps {
   onClose: Function;
+  onFolderCreated: Function;
   parent: MetanetNode;
 }
 
@@ -28,6 +29,8 @@ class NewFolderModal extends React.Component<NewFolderProps> {
 
     message: ''
   }
+
+  metanetNode = null as MetanetNode | null;
 
   render() {
 
@@ -46,7 +49,7 @@ class NewFolderModal extends React.Component<NewFolderProps> {
           <div id='buttons'>
             <div>
               <IonButton onClick={() => this.props.onClose()} >Close</IonButton>
-              <IonButton onClick={() => this.generateOutputs()} color='success'>Create Folder</IonButton>
+              <IonButton onClick={() => this.generateOutputs()} color='success' disabled={!this.state.folderName}>Create Folder</IonButton>
             </div>
 
             {!this.state.moneyButtonDisabled && 
@@ -80,10 +83,19 @@ class NewFolderModal extends React.Component<NewFolderProps> {
     );
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     this.setState({moneyButtonDisabled: true});
+    this.getMasterKeyFromStorage();
+  }
 
-    const masterKeyEntry = MasterKeyStorage.getMasterKeyEntry(this.props.parent.nodeAddress);
+  async componentDidUpdate(prevProps: NewFolderProps) {
+    if (prevProps.parent !== this.props.parent) {
+      this.getMasterKeyFromStorage();
+    }
+  }
+
+  async getMasterKeyFromStorage() {
+    const masterKeyEntry = await MasterKeyStorage.getMasterKeyEntryForChild(this.props.parent);
     if (masterKeyEntry) {
       this.setState({xprivkey: masterKeyEntry.masterKey});
     } else {
@@ -100,13 +112,11 @@ class NewFolderModal extends React.Component<NewFolderProps> {
   }
 
   onFolderNameChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    console.log('name changed')
     this.setState({folderName: e.target.value});
     this.setState({moneyButtonDisabled: true});
   }
 
   async generateOutputs() {
-    console.log('generate outputs');
     const moneyButtonProps = this.state.moneyButtonProps;
     let moneyButtonDisabled = true;
 
@@ -114,22 +124,10 @@ class NewFolderModal extends React.Component<NewFolderProps> {
       // Transaction will create the root node as well as fund the root
       // so that the .bsvignore and bsvpush.json files can be created
       const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
-
-      const metanetNode = new MetanetNode();
-      metanetNode.name = this.state.folderName;
-      metanetNode.parentTxId = this.props.parent.nodeTxId;
-      metanetNode.derivationPath = this.props.parent.nextFreeDerivationPath();
-      metanetNode.parent = this.props.parent;
-
-      const folderTx = await Metanet.folderDummyTx(masterKey, metanetNode);
-
+      this.metanetNode = this.props.parent.childOrCreate(this.state.folderName, masterKey);
+      const folderTx = await Metanet.folderDummyTx(masterKey, this.metanetNode);
       const folderFee = folderTx.getFee() / 1e8;
-
       const parentAddress = this.props.parent.nodeAddress; //masterKey.deriveChild(this.props.parent.derivationPath).publicKey.toAddress().toString();
-
-      console.log('Parent derivation path: ' + this.props.parent.derivationPath);
-      console.log('Sending funds to parent address: ' + parentAddress);
-
       const outputs = [
         {
           "to": parentAddress, // Parent funds children
@@ -145,24 +143,20 @@ class NewFolderModal extends React.Component<NewFolderProps> {
   }
 
   async onPayment(arg: any) {
-    console.log('on payment');
     const fundingTxId = arg.txid;
     console.log('funding txid: ' + fundingTxId);
-    const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
+    if (this.metanetNode) {
+      this.props.parent.spentVouts = [];
+      const masterKey = bsv.HDPrivateKey(this.state.xprivkey);
+      const folderTx = await Metanet.folderTx(masterKey, fundingTxId, this.metanetNode);
 
-    const metanetNode = new MetanetNode();
-    metanetNode.name = this.state.folderName;
-    metanetNode.parentTxId = this.props.parent.nodeTxId;
-    metanetNode.derivationPath = this.props.parent.nextFreeDerivationPath();
-    metanetNode.parent = this.props.parent;
+      console.log(`Sending folder transaction: ${folderTx.id}`);
+      await Metanet.send(folderTx);
 
-    const folderTx = await Metanet.folderTx(masterKey, fundingTxId, metanetNode);
-
-    console.log(`Sending folder transaction: ${folderTx.id}`);
-    await Metanet.send(folderTx);
-
-    console.log(`Folder created, view here https://codeonchain.network/tx/${folderTx.id}`); 
-    this.setState({message: `Folder created, view here https://codeonchain.network/tx/${folderTx.id}`});
+      console.log(`Folder created, view here https://codeonchain.network/tx/${folderTx.id}`); 
+      this.setState({message: `Folder created`});
+      this.props.onFolderCreated();
+    }
   }
 
   onError(arg: any) {

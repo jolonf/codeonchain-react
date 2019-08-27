@@ -1,0 +1,35 @@
+.attribution-slides {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+}
+
+.attribution-slide {
+  width: 300px;
+}
+
+.attribution-card {
+  width: 280px;
+  height: 440px;
+}
+
+.not-included {
+  color: lightgrey;
+}
+
+.attribution-content {
+  text-align: left;
+}
+
+.create-new-flex {
+  height: 440px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.center {
+  text-align: center;
+}
+

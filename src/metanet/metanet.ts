@@ -12,6 +12,7 @@ import { MetanetProtocol } from '../protocols/metanet.protocol';
 import { DirectoryProtocol } from '../protocols/directory.protocol';
 import { FileTree } from './FileTree';
 import { BcatProtocol } from '../protocols/bcat.protocol';
+import { LinkProtocol } from '../protocols/link.protocol';
 
 export const METANET_FLAG     = 'meta';
 export const MIN_OUTPUT_VALUE = 546;
@@ -40,13 +41,15 @@ export class Metanet {
     BcatProtocol,
     BcatPartProtocol,
     DirectoryProtocol,
+    LinkProtocol,
     DerivationPathProtocol
   ] as any[];
 
   static fileProtocols = [
     BProtocol.address,
     BcatProtocol.address,
-    DirectoryProtocol.address
+    DirectoryProtocol.address,
+    LinkProtocol.address
   ] as any[];
 
   static async getMetanetNode(txId: string): Promise<MetanetNode> {
@@ -66,7 +69,15 @@ export class Metanet {
     return metanetNodes[0];
   }
 
-  static async getChildren(parentAddress: string, txId: string): Promise<MetanetNode[]> {
+  /**
+   * 
+   * @param parentAddress 
+   * @param txId 
+   * @param complete If false only downloads the short strings
+   */
+  static async getChildren(parentAddress: string, txId: string, complete = false): Promise<MetanetNode[]> {
+    const project = complete ? {"out.tape.cell": 1, "tx.h": 1} : {"out.tape.cell.s": 1, "tx.h": 1};
+
     return this.getMetanetNodes({
       "v": 3,
       "q": {
@@ -91,9 +102,7 @@ export class Metanet {
             }
           ]
         },
-        "project": {
-          "out.tape.cell.s": 1, "tx.h": 1
-        }
+        "project": project
       }
     });
   }
@@ -111,13 +120,15 @@ export class Metanet {
       const metanetNode = new MetanetNode();
       metanetNode.nodeTxId = item.tx.h;
 
-      for (const cell of item.out[0].tape) {
-        const protocolAddress = cell.cell[0].s;
-        const protocol = this.protocols.find(p => p.address === protocolAddress);
-        if (protocol) {
-          protocol.read(metanetNode, cell.cell as Cell);
-          if (this.fileProtocols.includes(protocolAddress)) {
-            metanetNode.protocol = protocolAddress;
+      for (const output of item.out) {
+        for (const cell of output.tape) {
+          const protocolAddress = cell.cell[0].s;
+          const protocol = this.protocols.find(p => p.address === protocolAddress);
+          if (protocol) {
+            protocol.read(metanetNode, cell.cell as Cell);
+            if (this.fileProtocols.includes(protocolAddress)) {
+              metanetNode.protocol = protocolAddress;
+            }
           }
         }
       }
@@ -133,6 +144,46 @@ export class Metanet {
   }
 
   /**
+   * Used to get txs which are not necessarily metanet nodes.
+   * Used for creating links.
+   * @param txId 
+   */
+  static async getProtocols(txId: string): Promise<any[] | undefined> {
+    const query = {
+      "v": 3,
+      "q": {
+          "find": {
+              "tx.h": txId
+          },
+          "project": {
+              "tx.h": 1,
+              "out.tape.cell": 1,
+          }
+      }
+    };
+    const url = PLANARIA_ENDPOINT + btoa(JSON.stringify(query));
+    const response = await fetch(url, { headers: { key: '1DzNX2LzKrmoyYVyqMG46LLknzSd7TUYYP' } });
+    const json = await response.json();
+    //console.log(json);
+    const items = json.u.reverse().concat(json.c);
+
+    const protocols = [] as any;
+
+    for (const item of items) { 
+      for (const output of item.out) {
+        for (const cell of output.tape) {
+          const protocolAddress = cell.cell[0].s;
+          const protocol = this.protocols.find(p => p.address === protocolAddress);
+          if (protocol) {
+            protocols.push(protocol.fromCell(cell.cell as Cell))
+          }
+        }
+      }
+    }
+    return protocols;
+  }
+
+  /**
    * Returns the root of the tree if it has been loaded, if not
    * loads missing parents.
    * @param node 
@@ -142,7 +193,6 @@ export class Metanet {
     if (node.parentTxId === 'NULL') {
       return node;
     }
-
     if (!node.parent) {
       node.parent = await this.getMetanetNode(node.parentTxId);
     }
@@ -167,11 +217,8 @@ export class Metanet {
 
   static async getBcatData(parts: string[]): Promise<Buffer> {
     const buffers = [];
-    // Bcat parts start at index 10
-    let i = 10;
-    let txId;
-    while (i < parts.length && (txId = parts[i++]).length === 64) {
-      console.log(`\tFetching part ${i-10}: ${txId}.`);
+    for (const txId of parts) {
+      console.log(`\tFetching part: ${txId}.`);
       const response = await fetch(`https://bico.media/${txId}`);
       buffers.push(Buffer.from(await response.arrayBuffer()));
     }
@@ -199,10 +246,10 @@ export class Metanet {
       let metanetNode = parent.childWithName(fileTree.name);
 
       if (!metanetNode) {
-        metanetNode = new MetanetNode();
-        metanetNode.name = fileTree.name;
-        metanetNode.derivationPath = `${parent.derivationPath}/${nextFreeDerivationIndex}`;
-        metanetNode.nodeAddress = masterKey.deriveChild(metanetNode.derivationPath).publicKey.toAddress().toString();
+        metanetNode = new MetanetNode(parent.nodeTxId, 
+                                      masterKey, 
+                                      `${parent.derivationPath}/${nextFreeDerivationIndex}`,
+                                      fileTree.name);
         nextFreeDerivationIndex++;
         parent.children.push(metanetNode);
       }
@@ -251,7 +298,7 @@ export class Metanet {
       // Little sleep to ensure UI is updated
       await this.sleep(1);
       const buffer = data.subarray(offset, offset + MAX_TX_SIZE);
-      const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(BcatPartProtocol.from(buffer))];
+      const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(BcatPartProtocol.toASM(buffer))];
       const script = bsv.Script.fromASM(opReturn.join(' '));
       const tx = new bsv.Transaction().from([this.dummyUtxo()]);
       tx.addOutput(new bsv.Transaction.Output({ script: script.toString(), satoshis: 0 }));
@@ -285,7 +332,9 @@ export class Metanet {
           if (buffer.length > MAX_TX_SIZE) {
             // Bcat
             const bcatPartTxIds = await this.sendBcatParts(masterKey, fundingTxId, metanetNode, buffer, callback);
+            txIds.push(...bcatPartTxIds);
             const bcatTx = await this.bcatTx(masterKey, fundingTxId, metanetNode, bcatPartTxIds);
+            metanetNode.nodeTxId = bcatTx.id;
             await this.send(bcatTx);
           } else {
             const fileTx = await this.fileTx(masterKey, fundingTxId, metanetNode, buffer);
@@ -318,15 +367,14 @@ export class Metanet {
     for (let i = 0, offset = 0; i < partCount; i++, offset += MAX_TX_SIZE) {
       callback(`${metanetNode.name} (part ${i + 1})`);
       const buffer = data.subarray(offset, offset + MAX_TX_SIZE);
-      const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(BcatPartProtocol.from(buffer))];
+      const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(BcatPartProtocol.toASM(buffer))];
 
       const parentKey = masterKey.deriveChild(metanetNode.parent.derivationPath);
       let utxo = null;
-      while (!(utxo = await this.findUtxoByFee(metanetNode.parent, fundingTxId, metanetNode.fee))) {
+      while (!(utxo = await this.findUtxoByFee(metanetNode.parent, fundingTxId, metanetNode.partFees[i]))) {
         console.log(`Waiting for UTXO for key: ${metanetNode.parent.nodeAddress}, txid: ${fundingTxId}, fee: ${metanetNode.fee}`);
         await this.sleep(1000);
       }
-      
       const script = bsv.Script.fromASM(opReturn.join(' '));
       const tx = new bsv.Transaction().from([utxo]);
       tx.addOutput(new bsv.Transaction.Output({ script: script.toString(), satoshis: 0 }));
@@ -367,13 +415,12 @@ export class Metanet {
     }
 
     const opReturnPayload = [
-      ...MetanetProtocol.from(nodeAddress, metanetNode.parentTxId), '|',
+      ...MetanetProtocol.toASM(nodeAddress, metanetNode.parentTxId), '|',
       ...payload, '|',
-      ...DerivationPathProtocol.from(metanetNode.derivationPath)
+      ...DerivationPathProtocol.toASM(metanetNode.derivationPath)
     ];
 
     const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(opReturnPayload)];
-
     const script = bsv.Script.fromASM(opReturn.join(' '))
     if (script.toBuffer().length > 100000) {
       throw new Error(`Maximum OP_RETURN size is 100000 bytes. Script is ${script.toBuffer().length} bytes.`)
@@ -403,7 +450,7 @@ export class Metanet {
   }
 
   static async fileTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, data: Buffer | string) {
-    const payload = BProtocol.from(data, metanetNode.name, ' ', ' ');
+    const payload = BProtocol.toASM(data, metanetNode.name, ' ', ' ');
     return this.createTx(masterKey, fundingTxId, metanetNode, payload);
   }
 
@@ -412,7 +459,7 @@ export class Metanet {
   }
 
   static async folderTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode) {
-    const payload = DirectoryProtocol.from(metanetNode.name);
+    const payload = DirectoryProtocol.toASM(metanetNode.name);
     return this.createTx(masterKey, fundingTxId, metanetNode, payload);
   }
 
@@ -421,7 +468,7 @@ export class Metanet {
   }
 
   static async bcatTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, partTxIds: string[]) {
-    const payload = BcatProtocol.from(partTxIds, metanetNode.name, ' ', ' ');
+    const payload = BcatProtocol.toASM(partTxIds, metanetNode.name, ' ', ' ');
     return this.createTx(masterKey, fundingTxId, metanetNode, payload);
   }
 
@@ -464,8 +511,14 @@ export class Metanet {
       address: '19dCWu1pvak7cgw5b1nFQn9LapFSQLqahC',
       txId: 'e29bc8d6c7298e524756ac116bd3fb5355eec1da94666253c3f40810a4000804',
       outputIndex: 0,
+      vout: 0,
       satoshis: 5000000000,
-      scriptPubKey: '21034b2edef6108e596efb2955f796aa807451546025025833e555b6f9b433a4a146ac'
+      value: 5000000000,
+      amount: 0.00000546,
+      confirmations: 0,
+      height: 0,
+      scriptPubKey: '76a91405f77028f478f66228e4c07e5ff938189a34683e88ac',
+      script: '76a91405f77028f478f66228e4c07e5ff938189a34683e88ac'
     });
   }
 

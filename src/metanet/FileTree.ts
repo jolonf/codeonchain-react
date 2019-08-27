@@ -4,7 +4,11 @@ export class FileTree {
   constructor(public name: string, public file: File | null, public children: FileTree[] = []) {}
 
   fileCount(): number {
-    return 1 + (this.children.length === 0 ? 0 : this.children.map(fileTree => fileTree.fileCount()).reduce((sum, count) => sum + count));
+    let count = 0;
+    for (const fileTree of this) {
+      count += fileTree ? 1 : 0; // Get around unused variable warning
+    }
+    return count;
   }
 
   /**
@@ -12,12 +16,12 @@ export class FileTree {
    * Assumes bcat files and max tx size of MAX_TX_SIZE.
    */
   txCount(): number {
-    let parts = Math.ceil(this.file!.size / MAX_TX_SIZE);
-    // If there is more than one part then we also need to add one for the Bcat parent tx itself
-    if (parts > 1) {
-      parts++;
+    // Recursively visit each FileTree
+    let count = 0;
+    for (const fileTree of this) {
+      count += fileTree.file ? 1 + Math.ceil(fileTree.file.size / MAX_TX_SIZE) : 1;
     }
-    return parts + (this.children.length === 0 ? 0 : this.children.map(fileTree => fileTree.txCount()).reduce((sum, count) => sum + count));
+    return count;
   }
 
   isDirectory(): boolean {
@@ -108,6 +112,16 @@ export class FileTree {
     });
   }
 
+  /**
+   * Iterate recursively
+   */
+  *[Symbol.iterator](): IterableIterator<FileTree>  {
+    yield this;
 
+    for (const child of this.children) {
+      yield *child;
+    }
+  }
 }
+
 

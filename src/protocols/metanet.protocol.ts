@@ -3,8 +3,19 @@ import { Cell } from "../metanet/metanet";
 
 export class MetanetProtocol {
   static address = 'meta';
+  static description = 'Metanet';
 
-  static from(nodeAddress: string, parentTxId: string | null) {
+  nodeAddress = '';
+  parentTxId = '';
+
+  static fromCell(cell: Cell[]): MetanetProtocol {
+    const metanetProtocol = new MetanetProtocol();
+    metanetProtocol.nodeAddress = cell[1].s;
+    metanetProtocol.parentTxId  = cell[2].s;
+    return metanetProtocol;
+  }
+
+  static toASM(nodeAddress: string, parentTxId: string | null) {
     return [
       this.address, // meta
       nodeAddress,

@@ -4,8 +4,9 @@
  */
 export class BcatPartProtocol {
   static address = '1ChDHzdd1H4wSjgGMHyndZm6qxEDGjqpJL';
+  static description = 'B://cat part';
 
-  static from(data: Buffer) {
+  static toASM(data: Buffer) {
     return [
       this.address,
       data

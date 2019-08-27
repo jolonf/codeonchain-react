@@ -1,4 +1,5 @@
 import { DirectoryProtocol } from "../protocols/directory.protocol";
+import { LinkProtocol } from '../protocols/link.protocol';
 
 export class MetanetNode {
   nodeAddress = '';
@@ -11,19 +12,20 @@ export class MetanetNode {
   derivationPath = '';
 
   dataString = '';
-  //dataHex = '';
   dataBase64 = '';
 
   parent = null as MetanetNode | null;
   children = [] as MetanetNode[];
   partTxIds = [] as string[]; // Parts for Bcat
+  link = null as LinkProtocol | null;
 
   fee = 0;
   partFees = [] as number[]; // If this node has related txs (e.g. Bcat parts)
 
   spentVouts = [] as number[];
 
-  constructor(masterKey: any | null = null, derivationPath: string = '', name = '') {
+  constructor(parentTxId = '', masterKey: any | null = null, derivationPath: string = '', name = '') {
+    this.parentTxId = parentTxId;
     if (masterKey && derivationPath) {
       this.derivationPath = derivationPath;
       this.nodeAddress = masterKey.deriveChild(derivationPath).publicKey.toAddress().toString();
@@ -33,6 +35,14 @@ export class MetanetNode {
 
   isDirectory(): boolean {
     return this.protocol === DirectoryProtocol.address;
+  }
+
+  isLink(): boolean {
+    return !!this.link;
+  }
+
+  isRoot(): boolean {
+    return this.parentTxId === 'NULL';
   }
 
   /**
@@ -54,5 +64,16 @@ export class MetanetNode {
 
   childWithName(name: string): MetanetNode | undefined {
     return this.children.find(c => c.name === name);
+  }
+
+  childOrCreate(fileName: string, masterKey: any) {
+    let child = this.childWithName(fileName);
+
+    if (!child) {
+      child = new MetanetNode(this.nodeTxId, masterKey, this.nextFreeDerivationPath(), fileName);
+      child.parent = this;
+    }
+
+    return child;
   }
 }

@@ -4,6 +4,7 @@ export class Repo extends MetanetNode {
   description = '';
   sponsor = {} as any;
   version = '';
+  github = '';
 
   constructor(nodeAddress: string, nodeTxId: string, bsvpushJson: any) {
     super();
@@ -12,6 +13,7 @@ export class Repo extends MetanetNode {
     this.name = bsvpushJson.name;
     this.description = bsvpushJson.description;
     this.version = bsvpushJson.version;
+    this.github = bsvpushJson.github;
 
     if (bsvpushJson.sponsor) {
       const defaults = {

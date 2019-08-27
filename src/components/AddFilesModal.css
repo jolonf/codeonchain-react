@@ -34,6 +34,18 @@
   background-color: lightgrey;
 }
 
+ion-checkbox {
+  vertical-align: middle;
+}
+
+ion-label {
+  vertical-align: middle;
+}
+
+ion-button {
+  vertical-align: middle;
+}
+
 .file-trees-container {
   width: 90%;
   max-height: 200px;

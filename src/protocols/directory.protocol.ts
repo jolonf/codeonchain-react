@@ -6,8 +6,17 @@ import { Cell } from "../metanet/metanet";
  */
 export class DirectoryProtocol {
   static address = '1FR1dTwavR2exZvy2JxKL2Dv2nCMEMtB5N';
+  static description = 'Directory';
 
-  static from(folderName: string) {
+  name = '';
+
+  static fromCell(cell: Cell[]): DirectoryProtocol {
+    const directoryProtocol = new DirectoryProtocol();
+    directoryProtocol.name  = cell[1].s || cell[1].ls;
+    return directoryProtocol;
+  }
+
+  static toASM(folderName: string) {
     return [
       this.address,
       folderName

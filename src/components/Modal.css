@@ -44,11 +44,16 @@ legend {
   margin-top: 20px;
   margin-bottom: 20px;
   justify-content: center;
+  align-items: center;
 }
 
 .label {
   text-align: right;
   font-weight: bold;
+}
+
+label {
+  vertical-align: middle;
 }
 
 input {
@@ -62,6 +67,7 @@ input {
 
 .input-note {
   font-size: 0.8em;
+  color: grey;
 }
 
 td {
@@ -73,12 +79,16 @@ td {
   color: orange;
 }
 
+#store-master-key {
+  vertical-align: middle;
+}
+
 .hidden {
   vertical-align: middle;
 }
 
 #repo-hidden {
-/*  vertical-align: middle;*/
+  vertical-align: middle;
 }
 
 #buttons {
@@ -101,11 +111,11 @@ td {
 #new-repo-money-button {
   margin: auto;
 }
-/*
+
 .checkbox-input {
-  vertical-align: text-bottom;
+  vertical-align: middle;
 }
-*/
+
 
 #buttons {
   margin-top: 20px;

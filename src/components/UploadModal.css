@@ -1,0 +1,13 @@
+.upload-buttons {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+
+.attribution-container {
+  flex: 1;
+}
+
+.empty-space {
+  flex: 1;
+}

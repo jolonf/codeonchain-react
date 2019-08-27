@@ -6,14 +6,36 @@ import { Cell, Metanet } from "../metanet/metanet";
  */
 export class BProtocol {
   static address = '19HxigV4QyBv3tHpQVcUEQyq1pzZVdoAut';
+  static description = 'B:// file';
 
-  static from(data: Buffer | string, fileName: string, mimeType = ' ', encoding = ' ') {
+  dataString  = '';
+  dataBase64  = '';
+  mimeType    = '';
+  encoding    = '';
+  name        = '';
+
+  static fromCell(cell: Cell[]): BProtocol {
+    const b = new BProtocol();
+    b.dataString  = cell[1].s || cell[1].ls;
+    b.dataBase64  = cell[1].b || cell[1].lb;
+    b.mimeType    = cell[2].s;
+    b.encoding    = cell[3].s;
+    b.name        = cell[4].s;
+
+    if (b.mimeType && b.mimeType.trim() === '') {
+      b.mimeType = Metanet.guessMimeType(b.name);
+    }
+
+    return b;
+  }
+
+  static toASM(data: Buffer | string, fileName: string, mimeType = ' ', encoding = ' ') {
     return [
       this.address, // B://
-      data, // Data
-      mimeType, // Media Type
-      encoding, // Encoding
-      fileName // Filename
+      data, 
+      mimeType, 
+      encoding,
+      fileName 
     ];
   }
 
