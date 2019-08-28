@@ -1,7 +1,9 @@
 import { Metanet, Cell } from "../metanet/metanet";
 import { MetanetNode } from "../metanet/metanet-node";
 
-
+/**
+ * https://github.com/jolonf/bitcom-protocols/blob/master/link-protocol.md
+ */
 export class LinkProtocol {
   static address = '12UqxsvAW8bwtwQbGzgW3jJWVkuEuq2rGA';
   static description = 'Link';

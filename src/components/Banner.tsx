@@ -6,6 +6,7 @@ import '../theme/variables.scss';
 import '../globals.scss';
 import { Link, withRouter, Route, Switch } from 'react-router-dom';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
+import Modal from './Modal';
 
 const Banner = withRouter(({history, match, location}) => {
 
@@ -32,6 +33,9 @@ const Banner = withRouter(({history, match, location}) => {
         <div id="new-repo-btn-container">
           <IonButton id="new-repo-btn" color="success" href={`${baseURL}/new-repo`}>+ New Repository</IonButton>
         </div>
+        <div id="sign-in-container">
+          <IonButton id="sign-in-btn" color='medium' fill='outline' href={`${baseURL}/sign-in`}>Sign In...</IonButton>
+        </div>
         <div id='search-container'>
           <IonSearchbar onKeyUp={search} placeholder="Transaction ID" mode="ios"/>
         </div>
@@ -42,6 +46,13 @@ const Banner = withRouter(({history, match, location}) => {
             <Route path={`${basePath}/new-repo`} render={() => (
               <NewRepoModal onClose={() => history.push(baseURL)}/>
             )}/>
+            <Route path={`${basePath}/sign-in`} render={() => (
+              <Modal title='Sign In' onClose={() => history.push(match.url)}>
+                <p>Coming soon...</p>
+                <IonButton onClick={() => history.push(match.url)}>Close</IonButton>
+              </Modal>
+            )}/>
+
           </Switch>
         </CSSTransition>
       </TransitionGroup>

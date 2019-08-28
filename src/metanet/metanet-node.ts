@@ -2,6 +2,7 @@ import { DirectoryProtocol } from "../protocols/directory.protocol";
 import { LinkProtocol } from '../protocols/link.protocol';
 import { Metanet } from "./metanet";
 import { MetanetProtocol } from "../protocols/metanet.protocol";
+import { DataIntegrityProtocol } from '../protocols/data-integrity.protocol';
 
 export class MetanetNode {
   nodeAddress = '';
@@ -20,6 +21,7 @@ export class MetanetNode {
   children = [] as MetanetNode[];
   partTxIds = [] as string[]; // Parts for Bcat
   link = null as LinkProtocol | null;
+  dataIntegrity = null as DataIntegrityProtocol | null;
 
   // Used during fee estimation
   fee = 0;

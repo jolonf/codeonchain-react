@@ -13,6 +13,7 @@ import { DirectoryProtocol } from '../protocols/directory.protocol';
 import { FileTree } from './file-tree';
 import { BcatProtocol } from '../protocols/bcat.protocol';
 import { LinkProtocol } from '../protocols/link.protocol';
+import { DataIntegrityProtocol } from '../protocols/data-integrity.protocol';
 
 export const METANET_FLAG     = 'meta';
 export const MIN_OUTPUT_VALUE = 546;
@@ -268,7 +269,7 @@ export class Metanet {
         if (buffer.length > MAX_TX_SIZE) {
           // Bcat
           await this.estimateBcatParts(metanetNode, buffer, callback);
-          await this.bcatDummyTx(masterKey, metanetNode, metanetNode.partFees.map(() => '0'.repeat(64)));
+          await this.bcatDummyTx(masterKey, metanetNode, metanetNode.partFees.map(() => '0'.repeat(64)), buffer);
           fee += metanetNode.partFees.reduce((sum, fee) => sum + fee);
         } else {
           await this.fileDummyTx(masterKey, metanetNode, buffer);
@@ -333,7 +334,7 @@ export class Metanet {
             // Bcat
             const bcatPartTxIds = await this.sendBcatParts(masterKey, fundingTxId, metanetNode, buffer, callback);
             txIds.push(...bcatPartTxIds);
-            const bcatTx = await this.bcatTx(masterKey, fundingTxId, metanetNode, bcatPartTxIds);
+            const bcatTx = await this.bcatTx(masterKey, fundingTxId, metanetNode, bcatPartTxIds, buffer);
             metanetNode.nodeTxId = bcatTx.id;
             await this.send(bcatTx);
           } else {
@@ -451,7 +452,9 @@ export class Metanet {
 
   static async fileTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, data: Buffer | string) {
     const payload = BProtocol.toASM(data, metanetNode.name, ' ', ' ');
-    return this.createTx(masterKey, fundingTxId, metanetNode, payload);
+    const digest = await this.sha512(data);
+    const dip = DataIntegrityProtocol.toASM('SHA-512', digest, '01', '01');
+    return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, ...dip]);
   }
 
   static async fileDummyTx(masterKey: any, metanetNode: MetanetNode, data: Buffer | string) {
@@ -467,13 +470,15 @@ export class Metanet {
     return this.folderTx(masterKey, null, metanetNode);
   }
 
-  static async bcatTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, partTxIds: string[]) {
+  static async bcatTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, partTxIds: string[], data: Buffer | string) {
     const payload = BcatProtocol.toASM(partTxIds, metanetNode.name, ' ', ' ');
-    return this.createTx(masterKey, fundingTxId, metanetNode, payload);
+    const digest = await this.sha512(data);
+    const dip = DataIntegrityProtocol.toASM('SHA-512', digest, '01', '01');
+    return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, ...dip]);
   }
 
-  static async bcatDummyTx(masterKey: any, metanetNode: MetanetNode, partTxIds: string[]) {
-    return this.bcatTx(masterKey, null, metanetNode, partTxIds);
+  static async bcatDummyTx(masterKey: any, metanetNode: MetanetNode, partTxIds: string[], data: Buffer | string) {
+    return this.bcatTx(masterKey, null, metanetNode, partTxIds, data);
   }
 
   /**
@@ -637,6 +642,12 @@ The Money Button transaction is: ${fundingTxId}`;
 
   static addressForDerivationPath(masterKey: any, derivationPath: string) {
     return masterKey.deriveChild(derivationPath).publicKey.toAddress().toString();
+  }
+
+  static async sha512(data: Buffer | string): Promise<Buffer> {
+    const buffer = typeof data === 'string' ? Buffer.from(data) : data;
+    const digest = await crypto.subtle.digest('SHA-512', buffer);
+    return Buffer.from(digest);
   }
 
   static async sleep(ms: number) {

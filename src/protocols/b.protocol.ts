@@ -35,7 +35,7 @@ export class BProtocol {
       data, 
       mimeType, 
       encoding,
-      fileName 
+      fileName
     ];
   }
 
@@ -50,5 +50,4 @@ export class BProtocol {
       metanetNode.mimeType = Metanet.guessMimeType(metanetNode.name);
     }
   }
-
 }
