@@ -33,3 +33,10 @@
   text-align: center;
 }
 
+#save-checkbox {
+  margin-left: 20px;
+}
+
+.delete-attribution {
+  margin-top: 40px;
+}

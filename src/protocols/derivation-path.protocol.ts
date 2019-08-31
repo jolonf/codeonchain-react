@@ -1,5 +1,6 @@
 import { MetanetNode } from "../metanet/metanet-node";
 import { Cell } from "../metanet/metanet";
+import { Protocol } from "./protocol";
 
 /**
  *  https://github.com/jolonf/bitcom-protocols/blob/master/derivation-path-protocol.md
@@ -26,5 +27,5 @@ export class DerivationPathProtocol {
   static read(metanetNode: MetanetNode, cell: Cell[]) {
     metanetNode.derivationPath = cell[1].s || cell[1].ls;
   }
-
 }
+export interface DerivationPathProtocol extends Protocol {}

@@ -45,8 +45,26 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
     }
     if (metanetNode.isRoot() && repo.sponsor && repo.sponsor.to) {
       console.log(repo.sponsor);
-      sponsor = <MoneyButton {...repo.sponsor} editable={true} />;
+      sponsor = <MoneyButton {...repo.sponsor} editable={true} label='Tip' successMessage='Thanks!' />;
     }
+  } else if (metanetNode.attributions.length > 0) {
+    const outputs = metanetNode.attributions.map(attribution => { 
+      const output = {
+        amount: attribution.defaultAmount,
+        currency: attribution.currency
+      } as any;
+
+      // Determine whether to use the address or paymail field
+      if (attribution.sponsor.includes('@')) {
+        output.paymail = attribution.sponsor;
+      } else {
+        output.address = attribution.sponsor;
+      }
+      return output;
+    });
+
+    //console.log('attribution outputs', outputs);
+    sponsor = <MoneyButton outputs={outputs} editable={false} label='Tip' successMessage='Thanks!' />;
   }
 
   return (

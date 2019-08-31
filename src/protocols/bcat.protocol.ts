@@ -2,6 +2,7 @@ import { MetanetNode } from "../metanet/metanet-node";
 import { Cell, Metanet } from "../metanet/metanet";
 
 import { Buffer } from 'buffer';
+import { Protocol } from "./protocol";
 
 /**
  * // http://bcat.bico.media/
@@ -68,5 +69,6 @@ export class BcatProtocol {
       metanetNode.mimeType = Metanet.guessMimeType(metanetNode.name);
     }
   }
-
 }
+
+export interface BcatProtocol extends Protocol {}

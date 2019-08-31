@@ -20,18 +20,79 @@ import '@ionic/core/css/text-alignment.css';
 import '@ionic/core/css/text-transformation.css';
 import '@ionic/core/css/flex-utils.css';
 import '@ionic/core/css/display.css';
+import { FileTree } from './metanet/file-tree';
+import { Attribution } from './storage/attribution';
 
-const App: React.FunctionComponent = () => (
-  <IonApp>
-    <IonReactRouter>
-      <IonPage>
-        <IonRouterOutlet>
-          <Route path="/tx/:txId" component={NodePage} />
-          <Route path="/" component={Home} />
-        </IonRouterOutlet>
-      </IonPage>
-    </IonReactRouter>
-  </IonApp>
-);
+export interface AddFilesModalContext {
+  fileTrees: FileTree[];
+  setFileTrees: (fileTrees: FileTree[]) => void;
+}
+
+export interface NewFolderModalContext {
+  name: string;
+  setName: (name: string) => void;
+}
+
+export interface NewLinkModalContext {
+  txId: string;
+  setTxId: (txId: string) => void;
+  name: string;
+  setName: (name: string) => void;
+}
+
+export interface AttributionsContext {
+  attributions: Attribution[];
+  setAttributions: (attributions: Attribution[]) => void;
+}
+
+interface AppContextInterface {
+  addFilesModal: AddFilesModalContext;
+  newFolderModal: NewFolderModalContext;
+  newLinkModal: NewLinkModalContext;
+  attributions: AttributionsContext;
+};
+
+export const AppContext = React.createContext<Partial<AppContextInterface>>({});
+
+class App extends React.Component<any, AppContextInterface> { 
+
+  readonly state: AppContextInterface = {
+    addFilesModal: {
+      fileTrees: [],
+      setFileTrees: (fileTrees: FileTree[]) => this.setState(state => Object({addFilesModal: {...state.addFilesModal, fileTrees}}))
+    },
+    newFolderModal: {
+      name: '',
+      setName: (name: string) => this.setState(state => Object({newFolderModal: {...state.newFolderModal, name}}))
+    },
+    newLinkModal: {
+      txId: '',
+      setTxId: (txId: string) => this.setState(state => Object({newLinkModal: {...state.newLinkModal, txId}})),
+      name: '',
+      setName: (name: string) => this.setState(state => Object({newLinkModal: {...state.newLinkModal, name}}))
+    },
+    attributions: {
+      attributions: [],
+      setAttributions: (attributions: Attribution[]) => this.setState(state => Object({attributions: {...state.attributions, attributions}}))      
+    }
+  };
+
+  render = () =>
+    (
+      <AppContext.Provider value={this.state}>
+        <IonApp>
+          <IonReactRouter>
+            <IonPage>
+              <IonRouterOutlet>
+                <Route path="/tx/:txId" component={NodePage} />
+                <Route path="/" component={Home} />
+              </IonRouterOutlet>
+            </IonPage>
+          </IonReactRouter>
+        </IonApp>
+      </AppContext.Provider>
+    );
+
+};
 
 export default App;

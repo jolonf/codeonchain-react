@@ -1,5 +1,6 @@
 import { Metanet, Cell } from "../metanet/metanet";
 import { MetanetNode } from "../metanet/metanet-node";
+import { Protocol } from "./protocol";
 
 /**
  * https://github.com/jolonf/bitcom-protocols/blob/master/link-protocol.md
@@ -44,3 +45,4 @@ export class LinkProtocol {
     metanetNode.mimeType = metanetNode.link.mimeType;
   }
 }
+export interface LinkProtocol extends Protocol {}

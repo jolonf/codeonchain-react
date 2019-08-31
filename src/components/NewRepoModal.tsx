@@ -39,14 +39,17 @@ class NewRepoModal extends React.Component<NewRepoProps> {
 
   bsvignoreData = '';
   bsvpushData = '';
-  bsvignoreNode = new MetanetNode(this.state.masterKey, 'm/0/0', '.bsvignore');
-  bsvpushNode = new MetanetNode(this.state.masterKey, 'm/0/1', 'bsvpush.json');
+  bsvignoreNode = null as MetanetNode | null;
+  bsvpushNode = null as MetanetNode | null;
 
   componentDidMount() {
     const masterKey = bsv.HDPrivateKey();
+    console.log('masterKey', masterKey);
 
     this.bsvignoreNode = new MetanetNode(masterKey, 'm/0/0', '.bsvignore');
     this.bsvpushNode = new MetanetNode(masterKey, 'm/0/1', 'bsvpush.json');
+    this.bsvignoreNode.mimeType = 'text/plain';
+    this.bsvpushNode.mimeType = 'application/json';
   
     this.setState({
       moneyButtonDisabled: true,
@@ -195,46 +198,49 @@ class NewRepoModal extends React.Component<NewRepoProps> {
         hidden: this.state.hidden,
         test: true
       }, null, 2);
-      this.bsvignoreNode.parent = rootNode;
-      this.bsvpushNode.parent = rootNode;
 
-      // We aren't sending these transactions yet, just estimating the size to fund the parent
-      await Metanet.fileDummyTx(this.state.masterKey, this.bsvignoreNode, this.bsvignoreData);
-      await Metanet.fileDummyTx(this.state.masterKey, this.bsvpushNode, this.bsvpushData);
+      if (this.bsvignoreNode && this.bsvpushNode) {
+        this.bsvignoreNode.parent = rootNode;
+        this.bsvpushNode.parent = rootNode;
 
-      const opReturnPayload = [
-        METANET_FLAG,
-        rootNode.nodeAddress,
-        'NULL',
-        '|',
-        DirectoryProtocol.address,
-        this.state.repoName,
-        '|',
-        DerivationPathProtocol.address,
-        'm/0'
-      ];
+        // We aren't sending these transactions yet, just estimating the size to fund the parent
+        await Metanet.fileDummyTx(this.state.masterKey, this.bsvignoreNode, this.bsvignoreData, this.bsvignoreNode.mimeType);
+        await Metanet.fileDummyTx(this.state.masterKey, this.bsvpushNode, this.bsvpushData, this.bsvpushNode.mimeType);
 
-      const outputs = [
-        {
-          "type": "SCRIPT",
-          "script": ['OP_FALSE', 'OP_RETURN', ...Metanet.arrayToHexStrings(opReturnPayload)].join(' '),
-          "amount": "0",
-          "currency": "BSV"
-        },
-        {
-          "to": rootNode.nodeAddress, // Root funds children
-          "amount": this.bsvignoreNode.fee / 1e8,
-          "currency": "BSV"
-        },
-        {
-          "to": rootNode.nodeAddress, // Root funds children
-          "amount": this.bsvpushNode.fee / 1e8,
-          "currency": "BSV"
-        }
-      ];
+        const opReturnPayload = [
+          METANET_FLAG,
+          rootNode.nodeAddress,
+          'NULL',
+          '|',
+          DirectoryProtocol.address,
+          this.state.repoName,
+          '|',
+          DerivationPathProtocol.address,
+          'm/0'
+        ];
 
-      moneyButtonDisabled = false;
-      moneyButtonProps.outputs = outputs;
+        const outputs = [
+          {
+            "type": "SCRIPT",
+            "script": ['OP_FALSE', 'OP_RETURN', ...Metanet.arrayToHexStrings(opReturnPayload)].join(' '),
+            "amount": "0",
+            "currency": "BSV"
+          },
+          {
+            "to": rootNode.nodeAddress, // Root funds children
+            "amount": this.bsvignoreNode.fee / 1e8,
+            "currency": "BSV"
+          },
+          {
+            "to": rootNode.nodeAddress, // Root funds children
+            "amount": this.bsvpushNode.fee / 1e8,
+            "currency": "BSV"
+          }
+        ];
+
+        moneyButtonDisabled = false;
+        moneyButtonProps.outputs = outputs;
+      }
     }
     this.setState({moneyButtonDisabled, moneyButtonProps});
   }
@@ -250,23 +256,24 @@ class NewRepoModal extends React.Component<NewRepoProps> {
 
     const rootNode = new MetanetNode(this.state.masterKey, 'm/0', this.state.repoName);
 
-    this.bsvignoreNode.parentTxId = fundingTxId;
-    this.bsvignoreNode.parent = rootNode;
-    this.bsvpushNode.parentTxId = fundingTxId;
-    this.bsvpushNode.parent = rootNode;
+    if (this.bsvignoreNode && this.bsvpushNode) {
+      this.bsvignoreNode.parentTxId = fundingTxId;
+      this.bsvignoreNode.parent = rootNode;
+      this.bsvpushNode.parentTxId = fundingTxId;
+      this.bsvpushNode.parent = rootNode;
 
-    const bsvignoreTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, this.bsvignoreNode, this.bsvignoreData);
-    const bsvpushTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, this.bsvpushNode, this.bsvpushData);
+      const bsvignoreTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, this.bsvignoreNode, this.bsvignoreData, this.bsvignoreNode.mimeType);
+      const bsvpushTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, this.bsvpushNode, this.bsvpushData, this.bsvpushNode.mimeType);
 
-    console.log(`Sending .bsvignore transaction: ${bsvignoreTx.id}`);
-    await Metanet.send(bsvignoreTx);
-    console.log(`Sending bsvpush.json transaction: ${bsvpushTx.id}`);
-    await Metanet.send(bsvpushTx);
+      console.log(`Sending .bsvignore transaction: ${bsvignoreTx.id}`);
+      await Metanet.send(bsvignoreTx);
+      console.log(`Sending bsvpush.json transaction: ${bsvpushTx.id}`);
+      await Metanet.send(bsvpushTx);
 
-    console.log(`Repo created, view here https://codeonchain.network/tx/${fundingTxId}`);   
-    this.setState({message: `Repo created, loading...`});   
-    //window.location.href = `/tx/${fundingTxId}`;
-    this.props.history.push(`/tx/${fundingTxId}`);
+      console.log(`Repo created, view here https://codeonchain.network/tx/${fundingTxId}`);   
+      this.setState({message: `Repo created, loading...`});   
+      this.props.history.push(`/tx/${fundingTxId}`);
+    }
   }
 
   onError(arg: any) {

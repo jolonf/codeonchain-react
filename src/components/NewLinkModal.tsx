@@ -4,7 +4,7 @@ import bsv from 'bsv';
 
 import { withRouter, RouteComponentProps } from "react-router";
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useContext } from 'react';
 import UploadModal from './UploadModal';
 import { MetanetNode } from "../metanet/metanet-node";
 import { useState } from "react";
@@ -14,6 +14,8 @@ import { BProtocol } from "../protocols/b.protocol";
 import { BcatProtocol } from "../protocols/bcat.protocol";
 import { DirectoryProtocol } from "../protocols/directory.protocol";
 import { LinkProtocol } from '../protocols/link.protocol';
+import { Attribution } from '../storage/attribution';
+import { AppContext } from '../App';
 
 interface NewLinkModalProps extends RouteComponentProps {
   parent: MetanetNode;
@@ -22,24 +24,40 @@ interface NewLinkModalProps extends RouteComponentProps {
 }
 
 const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdded}) => {
-  const [xprv, setXprv] = useState('');
-  const [moneyButtonProps, setMoneyButtonProps] = useState({});
-  const [message, setMessage] = useState('');
-  const [txId, setTxId] = useState('');
-  const [fileName, setFileName] = useState('');
-  const [txIdMessage, setTxIdMessage] = useState('');
-  const [txInfo, setTxInfo] = useState({
-    description: '',
-    address: '',
-    name: '',
-    mimeType: '',
-    protocols: [] as string[]
-  });
-  const [uploadButtonDisabled, setUploadButtonDisabled] = useState(true);
-  const [progressBarValue, setProgressBarValue] = useState(0);
-  const [progressBarIndeterminate, setProgressBarIndeterminate] = useState(false);
-  const [metanetNode, setMetanetNode] = useState(null as MetanetNode | null);
-  const [linkASM, setLinkASM] = useState([] as string[]);
+  const [ xprv, 
+          setXprv ] = useState('');
+  const [ moneyButtonProps, 
+          setMoneyButtonProps ] = useState({});
+  const [ message, 
+          setMessage ] = useState('');
+  const [ txId, 
+          setTxId ] = useState('');
+  const [ fileName, 
+          setFileName ] = useState('');
+  const [ txIdMessage, 
+          setTxIdMessage ] = useState('');
+  const [ txInfo, 
+          setTxInfo ] = useState({
+            description: '',
+            address: '',
+            name: '',
+            mimeType: '',
+            protocols: [] as string[]
+          });
+  const [ uploadButtonDisabled, 
+          setUploadButtonDisabled ] = useState(true);
+  const [ progressBarValue, 
+          setProgressBarValue ] = useState(0);
+  const [ progressBarIndeterminate, 
+          setProgressBarIndeterminate ] = useState(false);
+  const [ metanetNode, 
+          setMetanetNode ] = useState(null as MetanetNode | null);
+  const [ linkASM, 
+          setLinkASM ] = useState([] as string[]);
+  const [ attributions, 
+          setAttributions ] = useState([] as Attribution[]);
+
+  const {newLinkModal} = useContext(AppContext);
 
   const onMasterKey = useCallback((newXprv: string) => {
     setXprv(newXprv);
@@ -50,6 +68,7 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
     const txId = e.target.value;
 
     setTxId(txId);
+    newLinkModal!.setTxId(txId);
     setUploadButtonDisabled(true);
 
     if (txId) {
@@ -98,6 +117,7 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
 
   const onFileNameChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFileName(e.target.value);
+    newLinkModal!.setName(e.target.value);
   }
 
   const onPrepareOutputs = () => {
@@ -123,6 +143,7 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
       // so that the .bsvignore and bsvpush.json files can be created
       const masterKey = bsv.HDPrivateKey(xprv);
       const metanetNode = parent.childOrCreate(fileName, masterKey);
+      metanetNode.attributions = attributions;
       const linkASM = LinkProtocol.toASM(txId, fileName, txInfo.protocols, txInfo.mimeType);
       await Metanet.createTx(masterKey, null, metanetNode, linkASM);
       const fee = metanetNode.fee;
@@ -183,11 +204,12 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
         onClose={() => onClose()}
         onPrepareOutputs={() => onPrepareOutputs()}
         onPayment={(args: any) => onPayment(args)}
-        onError={(arg: any) => onError(arg)}>
+        onError={(arg: any) => onError(arg)}
+        onAttributions={(a: Attribution[]) => setAttributions(a)}>
 
         <div className='form-grid'>
           <div className='label'>Create a link to an existing transaction:</div>
-          <div><input id='txid-input' onChange={(e) => onTxIdChanged(e)} className='monospace' placeholder='Transaction ID (64 digit hex)' /></div>
+          <div><input id='txid-input' defaultValue={newLinkModal!.txId} onChange={(e) => onTxIdChanged(e)} className='monospace' placeholder='Transaction ID (64 digit hex)' /></div>
           {txInfo.address &&
           <>
             <div className='label'>Protocol:</div> <div>{txInfo.description} <span className='monospace'>{txInfo.address}</span></div>
@@ -195,7 +217,7 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({parent, onClose, onFilesAdd
           </>
           }
           <div className='label'><IonLabel>Name: </IonLabel></div>
-          <div><input id='name-input' onChange={(e) => onFileNameChanged(e)} defaultValue={fileName} placeholder='File name' /></div>
+          <div><input id='name-input' onChange={(e) => onFileNameChanged(e)} defaultValue={newLinkModal!.name || fileName} placeholder='File name' /></div>
         </div>
 
         {txIdMessage && <p>{txIdMessage}</p>}

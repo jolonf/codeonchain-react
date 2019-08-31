@@ -3,17 +3,21 @@ import './EditAttribution.css';
 import React from "react";
 import { IonCard, IonButton, IonInput, IonCardContent, IonCardHeader, IonCardTitle, IonCheckbox, IonLabel, IonAlert } from "@ionic/react";
 import { Attribution } from '../storage/attribution';
+import { AttributionStorage } from '../storage/attribution-storage';
 
 interface EditAttributionProps {
-  onClose: Function;
+  onClose(): void;
+  onAttributions(a: Attribution[]): void;
 }
 
 class EditAttribution extends React.Component<EditAttributionProps> {
 
   state = {
     attributionList: [] as Attribution[],
+    currency: 'BSV',
     selectedAttributionIndex: -1,
-    showDeleteAttributionAlert: false
+    showDeleteAttributionAlert: false,
+    saveLocalStorage: true
   }
 
   render() {
@@ -26,16 +30,15 @@ class EditAttribution extends React.Component<EditAttributionProps> {
               <IonCheckbox checked={attribution.include} onIonChange={(e) => this.onIncludeCheckbox(e, i)} mode='ios' />
             </div>
             <IonCardTitle className={`${attribution.include ? '' : 'not-included'}`}>
-              <IonInput placeholder='Name'></IonInput>
+              <IonInput placeholder='Name' value={attribution.name} onIonChange={(e: any) => this.setAttributionProperty(i, 'name', e.target.value)}></IonInput>
             </IonCardTitle>
           </IonCardHeader>
           <IonCardContent className='attribution-content'>
-            <IonInput placeholder='Contact (Web address, email, etc)'/>
-            <IonInput placeholder='Role'/>
-            <IonInput placeholder='License'/>
-            <IonInput placeholder='Paymail or BSV address'/>
-            <IonInput placeholder='Amount' type='number'/>
-            <IonInput placeholder='Currency'/>
+            <IonInput placeholder='Contact (Web address, email, etc)' value={attribution.contact} onIonChange={(e: any) => this.setAttributionProperty(i, 'contact', e.target.value)}/>
+            <IonInput placeholder='Role' value={attribution.role} onIonChange={(e: any) => this.setAttributionProperty(i, 'role', e.target.value)}/>
+            <IonInput placeholder='License' value={attribution.license} onIonChange={(e: any) => this.setAttributionProperty(i, 'license', e.target.value)}/>
+            <IonInput placeholder='Paymail or BSV address' value={attribution.sponsor} onIonChange={(e: any) => this.setAttributionProperty(i, 'sponsor', e.target.value)}/>
+            <IonInput placeholder='Amount' value={attribution.defaultAmount} type='number' onIonChange={(e: any) => this.setAttributionProperty(i, 'defaultAmount', e.target.value)}/>
             <div className='center'>
               <IonButton className='delete-attribution' onClick={() => {this.onDeleteAttributionButton(i)}} color='medium' fill='outline'>Delete</IonButton>
             </div>
@@ -56,8 +59,23 @@ class EditAttribution extends React.Component<EditAttributionProps> {
             </IonCard>
           </div>
         </div>
+        <div className='center'>
+          Currency: <select value={this.state.currency} onChange={(e) => this.onCurrencyChanged(e)}>
+            <option value='BSV'>BSV</option>
+            <option value='USD'>USD</option>
+            <option value='AUD'>AUD</option>
+            <option value='CAD'>CAD</option>
+            <option value='EUR'>EUR</option>
+            <option value='GBP'>GBP</option>
+            <option value='GBP'>NZD</option>
+          </select>
+        </div>
         <div>
-          <IonCheckbox id='save-checkbox' /> <IonLabel>Save in local storage</IonLabel>
+          <IonCheckbox id='save-checkbox' checked={this.state.saveLocalStorage} onIonChange={e => this.onSaveLocalStorageChanged(e)} /> <IonLabel>Save in local storage</IonLabel>
+        </div>
+        <div className='center'>
+          <IonButton onClick={() => this.props.onClose()}>Cancel</IonButton>
+          <IonButton onClick={() => this.onSave()} color='success'>Save</IonButton>
         </div>
         <IonAlert 
           isOpen={this.state.showDeleteAttributionAlert}
@@ -78,6 +96,32 @@ class EditAttribution extends React.Component<EditAttributionProps> {
     );
   }
 
+  componentDidMount() {
+    const storedAttributions = AttributionStorage.getAttributions();
+    if (storedAttributions) {
+      const attributions = this.state.attributionList;
+      let currency = 'BSV';
+      // Merge
+      for (const attribution of storedAttributions) {
+        let foundIndex = -1;
+        const existing = attributions.find((a, i) => {
+          if (a.name === attribution.name) {
+            foundIndex = i;
+            return true;
+          }
+          return false;
+        });
+        if (existing) {
+          attributions[foundIndex] = attribution;
+        } else {
+          attributions.push(attribution);
+        }
+        currency = attribution.currency;
+      }
+      this.setState({attributionList: attributions, currency: currency});
+    }
+  }
+
   onCreateNewButton() {
     const attribution = new Attribution();
 
@@ -90,6 +134,12 @@ class EditAttribution extends React.Component<EditAttributionProps> {
       attributionList[i].include = e.target.checked;
       return {attributionList: attributionList};
     });
+  }
+
+  onCurrencyChanged(e: React.ChangeEvent<HTMLSelectElement>) {
+    if (e.target) {
+      this.setState({currency: e.target.value});
+    }
   }
 
   onDeleteAttributionButton(i: number) {
@@ -107,6 +157,27 @@ class EditAttribution extends React.Component<EditAttributionProps> {
         attributionList: attributionList
       };
     });
+  }
+
+  setAttributionProperty(index: number, property: string, value: string) {
+    this.setState((state: any) => {
+      state.attributionList[index][property] = value;
+      return state;
+    });
+  }
+
+  onSaveLocalStorageChanged(e: any) {
+    this.setState({saveLocalStorage: e.target.checked});
+  }
+
+  onSave() {
+    // Set currency
+    const attributions = this.state.attributionList;
+    attributions.forEach(a => a.currency = this.state.currency);
+    if (this.state.saveLocalStorage) {
+      AttributionStorage.storeAttributions(attributions);
+    }
+    this.props.onAttributions(attributions);
   }
 }
 

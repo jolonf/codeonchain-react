@@ -1,5 +1,6 @@
 import { MetanetNode } from "../metanet/metanet-node";
 import { Cell } from "../metanet/metanet";
+import { Protocol } from "./protocol";
 
 /**
  *  https://github.com/torusJKL/BitcoinBIPs/blob/master/DIP.md
@@ -36,3 +37,4 @@ export class DataIntegrityProtocol {
     metanetNode.dataIntegrity = this.fromCell(cell);
   }
 }
+export interface DataIntegrityProtocol extends Protocol {}

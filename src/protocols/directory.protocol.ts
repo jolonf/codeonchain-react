@@ -1,5 +1,6 @@
 import { MetanetNode } from "../metanet/metanet-node";
 import { Cell } from "../metanet/metanet";
+import { Protocol } from "./protocol";
 
 /**
  *  https://github.com/jolonf/bitcom-protocols/blob/master/directory-protocol.md
@@ -26,5 +27,5 @@ export class DirectoryProtocol {
   static read(metanetNode: MetanetNode, cell: Cell[]) {
     metanetNode.name = cell[1].s;
   }
-
 }
+export interface DirectoryProtocol extends Protocol {}

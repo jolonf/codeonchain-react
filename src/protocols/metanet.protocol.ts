@@ -1,5 +1,6 @@
 import { MetanetNode } from "../metanet/metanet-node";
 import { Cell } from "../metanet/metanet";
+import { Protocol } from "./protocol";
 
 export class MetanetProtocol {
   static address = 'meta';
@@ -28,3 +29,4 @@ export class MetanetProtocol {
     metanetNode.parentTxId  = cell[2].s;
   }
 }
+export interface MetanetProtocol extends Protocol {}

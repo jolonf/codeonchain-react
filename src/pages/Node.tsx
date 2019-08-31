@@ -23,7 +23,9 @@ import NodeChildren from '../components/NodeChildren';
 import FileData from '../components/FileData';
 import NewLinkModal from '../components/NewLinkModal';
 import Download from '../components/Download';
+import NodeAttribution from '../components/NodeAttribution';
 import { DirectoryProtocol } from '../protocols/directory.protocol';
+import { AppContext } from '../App';
 
 interface MatchParams {
   txId: string;
@@ -51,6 +53,8 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
             <NodeBanner metanetNode={metanetNode} repo={this.state.repo} />
             {metanetNode &&
             <>
+              {metanetNode.attributions.length > 0 &&
+              <NodeAttribution attributions={metanetNode.attributions}/>}
               {this.state.children.length > 0 &&
               <NodeChildren metanetNode={this.state.metanetNode} children={this.state.children} />}
               {metanetNode.isDirectory && metanetNode.isDirectory() &&
@@ -63,10 +67,18 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
                   <Switch location={this.props.location}>
 
                       <Route path={`${this.props.match.path}/add-files`} render={() => (
-                        <AddFilesModal onClose={() => this.props.history.push(this.props.match.url)} onFilesAdded={() => this.onFilesAdded()} parent={metanetNode} />
-                      )}/>
+                        <AppContext.Consumer>
+                        { ({ addFilesModal }) =>
+                          <AddFilesModal context={addFilesModal!} onClose={() => this.props.history.push(this.props.match.url)} onFilesAdded={() => this.onFilesAdded()} parent={metanetNode} />
+                        }
+                        </AppContext.Consumer>
+                    )}/>
                       <Route path={`${this.props.match.path}/new-folder`} render={() => (
-                        <NewFolderModal onClose={() => this.props.history.push(this.props.match.url)} onFolderCreated={() => this.onFilesAdded()} parent={metanetNode} />
+                        <AppContext.Consumer>
+                          { ({ newFolderModal, attributions }) =>
+                            <NewFolderModal context={newFolderModal!} attributions={attributions!} onClose={() => this.props.history.push(this.props.match.url)} onFolderCreated={() => this.onFilesAdded()} parent={metanetNode} />
+                          }
+                        </AppContext.Consumer>
                       )}/>
                       <Route path={`${this.props.match.path}/new-link`} render={() => (
                         <NewLinkModal parent={this.state.metanetNode} onClose={() => this.props.history.push(this.props.match.url)} onFilesAdded={() => {this.onFilesAdded()}}/>

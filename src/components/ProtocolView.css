@@ -1,0 +1,52 @@
+
+.protocol-container {
+  background-color: rgb(50, 50, 50);
+  color: rgb(221, 220, 220);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  max-height: 50%;
+  overflow-y: auto;
+}
+
+.protocol-description {
+  background-color: rgb(95, 94, 94);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  padding: 1px;
+  padding-left: 15px;
+  padding-right: 15px;
+  font-weight: bold;
+}
+
+.protocol-address {
+  color: rgb(177, 177, 177);
+}
+
+.protocol-keys {
+  padding: 0px;
+}
+
+.right-align {
+  text-align: right;
+}
+
+.key-row {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.key-row:nth-child(odd) {
+  background-color: rgb(40, 40, 40);
+}
+
+.key-row:last-child {
+  padding-bottom: 7px;
+}
+
+.key-row:first-child {
+  padding-top: 7px;
+}
+
+.key {
+  padding-right: 20px;
+}

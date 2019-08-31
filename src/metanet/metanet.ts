@@ -14,6 +14,8 @@ import { FileTree } from './file-tree';
 import { BcatProtocol } from '../protocols/bcat.protocol';
 import { LinkProtocol } from '../protocols/link.protocol';
 import { DataIntegrityProtocol } from '../protocols/data-integrity.protocol';
+import { Attribution } from '../storage/attribution';
+import { AttributionProtocol } from '../protocols/attribution.protocol';
 
 export const METANET_FLAG     = 'meta';
 export const MIN_OUTPUT_VALUE = 546;
@@ -38,6 +40,7 @@ export class Metanet {
 
   static protocols = [
     MetanetProtocol,
+    AttributionProtocol,
     BProtocol,
     BcatProtocol,
     BcatPartProtocol,
@@ -51,7 +54,7 @@ export class Metanet {
     BcatProtocol.address,
     DirectoryProtocol.address,
     LinkProtocol.address
-  ] as any[];
+  ] as string[];
 
   static async getMetanetNode(txId: string): Promise<MetanetNode> {
     const metanetNodes = await this.getMetanetNodes({
@@ -168,7 +171,7 @@ export class Metanet {
     //console.log(json);
     const items = json.u.reverse().concat(json.c);
 
-    const protocols = [] as any;
+    const protocols = [] as any[];
 
     for (const item of items) { 
       for (const output of item.out) {
@@ -230,7 +233,7 @@ export class Metanet {
    * Estimates fees to send txs represented by the files in the array of file trees.
    * @param fileTrees 
    */
-  static async estimateFileTreesFee(masterKey: any, parent: MetanetNode, fileTrees: FileTree[], callback: Function): Promise<number> {
+  static async estimateFileTreesFee(masterKey: any, parent: MetanetNode, fileTrees: FileTree[], attributions: Attribution[], callback: Function): Promise<number> {
     let fee = 0;
 
     // If the fileTree already exists, get children
@@ -247,16 +250,17 @@ export class Metanet {
       let metanetNode = parent.childWithName(fileTree.name);
 
       if (!metanetNode) {
-        metanetNode = new MetanetNode(parent.nodeTxId, 
-                                      masterKey, 
+        metanetNode = new MetanetNode(masterKey, 
                                       `${parent.derivationPath}/${nextFreeDerivationIndex}`,
-                                      fileTree.name);
+                                      fileTree.name,
+                                      parent.nodeTxId);
         nextFreeDerivationIndex++;
         parent.children.push(metanetNode);
       }
 
       metanetNode.parent = parent;
       metanetNode.parentTxId = parent.nodeTxId;
+      metanetNode.attributions = attributions;
 
       callback(fileTree.name);
       console.log(`Estimating fees for: [${metanetNode.derivationPath}] ${fileTree.name}`);
@@ -269,10 +273,10 @@ export class Metanet {
         if (buffer.length > MAX_TX_SIZE) {
           // Bcat
           await this.estimateBcatParts(metanetNode, buffer, callback);
-          await this.bcatDummyTx(masterKey, metanetNode, metanetNode.partFees.map(() => '0'.repeat(64)), buffer);
+          await this.bcatDummyTx(masterKey, metanetNode, metanetNode.partFees.map(() => '0'.repeat(64)), buffer, fileTree.file.type);
           fee += metanetNode.partFees.reduce((sum, fee) => sum + fee);
         } else {
-          await this.fileDummyTx(masterKey, metanetNode, buffer);
+          await this.fileDummyTx(masterKey, metanetNode, buffer, fileTree.file.type);
         }
         fee += metanetNode.fee;
         console.log(`file fee: ${metanetNode.fee}`);
@@ -284,7 +288,7 @@ export class Metanet {
         fee += metanetNode.fee;
         console.log(`folder fee: ${metanetNode.fee}`);
 
-        fee += await this.estimateFileTreesFee(masterKey, metanetNode, fileTree.children, callback);
+        fee += await this.estimateFileTreesFee(masterKey, metanetNode, fileTree.children, attributions, callback);
       }
     }
 
@@ -334,11 +338,11 @@ export class Metanet {
             // Bcat
             const bcatPartTxIds = await this.sendBcatParts(masterKey, fundingTxId, metanetNode, buffer, callback);
             txIds.push(...bcatPartTxIds);
-            const bcatTx = await this.bcatTx(masterKey, fundingTxId, metanetNode, bcatPartTxIds, buffer);
+            const bcatTx = await this.bcatTx(masterKey, fundingTxId, metanetNode, bcatPartTxIds, buffer, fileTree.file.type);
             metanetNode.nodeTxId = bcatTx.id;
             await this.send(bcatTx);
           } else {
-            const fileTx = await this.fileTx(masterKey, fundingTxId, metanetNode, buffer);
+            const fileTx = await this.fileTx(masterKey, fundingTxId, metanetNode, buffer, fileTree.file.type);
             metanetNode.nodeTxId = fileTx.id;
             await this.send(fileTx);
           }
@@ -421,7 +425,9 @@ export class Metanet {
       ...DerivationPathProtocol.toASM(metanetNode.derivationPath)
     ];
 
-    const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings(opReturnPayload)];
+    const attributions = metanetNode.attributions.map(a => ['|', ...AttributionProtocol.toASM(a)]).flat(1);
+
+    const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings([...opReturnPayload, ...attributions])];
     const script = bsv.Script.fromASM(opReturn.join(' '))
     if (script.toBuffer().length > 100000) {
       throw new Error(`Maximum OP_RETURN size is 100000 bytes. Script is ${script.toBuffer().length} bytes.`)
@@ -450,15 +456,15 @@ export class Metanet {
     return tx;
   }
 
-  static async fileTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, data: Buffer | string) {
-    const payload = BProtocol.toASM(data, metanetNode.name, ' ', ' ');
+  static async fileTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, data: Buffer | string, mimeType: string) {
+    const payload = BProtocol.toASM(data, metanetNode.name, mimeType, ' ');
     const digest = await this.sha512(data);
     const dip = DataIntegrityProtocol.toASM('SHA-512', digest, '01', '01');
     return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, ...dip]);
   }
 
-  static async fileDummyTx(masterKey: any, metanetNode: MetanetNode, data: Buffer | string) {
-    return this.fileTx(masterKey, null, metanetNode, data);
+  static async fileDummyTx(masterKey: any, metanetNode: MetanetNode, data: Buffer | string, mimeType: string) {
+    return this.fileTx(masterKey, null, metanetNode, data, mimeType);
   }
 
   static async folderTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode) {
@@ -470,15 +476,15 @@ export class Metanet {
     return this.folderTx(masterKey, null, metanetNode);
   }
 
-  static async bcatTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, partTxIds: string[], data: Buffer | string) {
-    const payload = BcatProtocol.toASM(partTxIds, metanetNode.name, ' ', ' ');
+  static async bcatTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, partTxIds: string[], data: Buffer | string, mimeType: string) {
+    const payload = BcatProtocol.toASM(partTxIds, metanetNode.name, mimeType, ' ');
     const digest = await this.sha512(data);
     const dip = DataIntegrityProtocol.toASM('SHA-512', digest, '01', '01');
     return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, ...dip]);
   }
 
-  static async bcatDummyTx(masterKey: any, metanetNode: MetanetNode, partTxIds: string[], data: Buffer | string) {
-    return this.bcatTx(masterKey, null, metanetNode, partTxIds, data);
+  static async bcatDummyTx(masterKey: any, metanetNode: MetanetNode, partTxIds: string[], data: Buffer | string, mimeType: string) {
+    return this.bcatTx(masterKey, null, metanetNode, partTxIds, data, mimeType);
   }
 
   /**

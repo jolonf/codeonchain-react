@@ -1,3 +1,4 @@
+import { Protocol } from "./protocol";
 
 /**
  * // http://bcat.bico.media/
@@ -12,5 +13,5 @@ export class BcatPartProtocol {
       data
     ];
   }
-
 }
+export interface BcatPartProtocol extends Protocol {}

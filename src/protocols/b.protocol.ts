@@ -1,5 +1,6 @@
 import { MetanetNode } from "../metanet/metanet-node";
 import { Cell, Metanet } from "../metanet/metanet";
+import { Protocol } from './protocol';
 
 /**
  * B:// format https://github.com/unwriter/B
@@ -51,3 +52,4 @@ export class BProtocol {
     }
   }
 }
+export interface BProtocol extends Protocol {}

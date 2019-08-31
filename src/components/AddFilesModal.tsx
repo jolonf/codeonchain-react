@@ -11,7 +11,7 @@ import '../theme/variables.scss';
 import { Metanet } from "../metanet/metanet";
 import { FileTree } from "../metanet/file-tree"; 
 import { FileTreeViewer } from './FileTreeViewer';
-import { IonButton, IonIcon, IonProgressBar, IonCheckbox } from "@ionic/react";
+import { IonButton, IonIcon, IonProgressBar } from "@ionic/react";
 import { MetanetNode } from "../metanet/metanet-node";
 import { cloudUpload } from "ionicons/icons";
 import { MasterKeyStorage } from "../storage/master-key-storage";
@@ -20,30 +20,26 @@ import { TransitionGroup, CSSTransition } from "react-transition-group";
 
 import EditAttribution from "./EditAttribution";
 import Modal from "./Modal";
+import { Attribution } from "../storage/attribution";
+import { AddFilesModalContext } from "../App";
 
 interface AddFilesProps extends RouteComponentProps {
   onClose: Function;
   onFilesAdded: Function;
   parent: MetanetNode;
+  context: AddFilesModalContext;
 }
 
 class AddFilesModal extends React.Component<AddFilesProps> {
 
   state = {
     xprivkey: '',
-
-    addFilesButtonDisabled: true,
-    moneyButtonDisabled: true,
     moneyButtonProps: {} as any,
-
     message: '',
-
     dragHighlight: false,
-
-    fileTrees: [] as FileTree[],
-
     progressBarValue: 0,
-    progressBarIndeterminate: false
+    progressBarIndeterminate: false,
+    attributions: []
   }
 
   fileInput: HTMLInputElement | null = null;
@@ -54,7 +50,11 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
   render() {
 
-    const fileCount = this.countFiles(this.state.fileTrees);
+    const fileTrees = this.props.context.fileTrees;
+    const fileCount = this.countFiles(fileTrees);
+
+    const xprv = this.state.xprivkey;
+    const addFilesButtonDisabled = !(!this.state.moneyButtonProps.outputs && xprv && xprv.startsWith('xprv') && this.props.context.fileTrees.length > 0);
     return (
       <>
         <div id="overlay" onClick={() => this.props.onClose()}>
@@ -75,26 +75,29 @@ class AddFilesModal extends React.Component<AddFilesProps> {
                   <input ref={ref => this.fileInput = ref} onChange={(e) => this.onFilesSelected(e)} id='hidden-file-input' type='file' multiple />
                   <input ref={ref => this.setFolderInputRef(ref)} onChange={(e) => this.onFolderSelected(e)} id='hidden-folder-input' type='file'  />
                 </div>
-                {this.state.fileTrees.length > 0 &&
+                {fileTrees.length > 0 &&
                 <p id='file-count'>
                   {`${fileCount} file${fileCount > 1 ? 's' : ''}`} selected
                 </p>}
               </div>
             </div>
-            <div className='attribution-container'>
-              <IonCheckbox color='dark'/>  <IonButton href={`${this.props.match.url}/attribution`} color='dark' fill='outline' size='small' disabled={false}>Attribution...</IonButton>
-            </div>
-            {this.state.fileTrees.length > 0 &&
+            {fileTrees.length > 0 &&
             <div className='file-trees-container'>
-              <FileTreeViewer fileTrees={this.state.fileTrees} />
+              <FileTreeViewer fileTrees={fileTrees} />
             </div>}
-            <div id='buttons'>
+            <div className='upload-buttons'>
+              <div className='attribution-container'>
+                <IonButton href={`${this.props.match.url}/attribution`} className='attribution-button' disabled={this.state.moneyButtonProps.outputs} color='dark' fill='outline'>Attribution...</IonButton>
+              </div>
               <div>
                 <IonButton onClick={() => this.props.onClose()} >Close</IonButton>
-                <IonButton onClick={() => this.onAddFilesButton()} disabled={this.state.addFilesButtonDisabled} color='success' >Add Files</IonButton>
+                <IonButton onClick={() => this.onAddFilesButton()} disabled={addFilesButtonDisabled} color='success' >Add Files</IonButton>
               </div>
-
-              {!this.state.moneyButtonDisabled && 
+              <div className='empty-space' />
+            </div>
+            {(this.state.moneyButtonProps.outputs || this.state.message || this.state.progressBarValue > 0 || this.state.progressBarIndeterminate) &&
+            <div id='buttons'>
+              {this.state.moneyButtonProps.outputs && 
                 (
                   <div id='dialog-money-button-container'>
                     <p>
@@ -102,7 +105,6 @@ class AddFilesModal extends React.Component<AddFilesProps> {
                     </p>
                     <div id='money-button-encapsulator'>
                       <MoneyButton 
-                        disabled={this.state.moneyButtonDisabled}
                         label='Create'
                         successMessage='Funded'
                         buttonId={this.props.parent.nodeTxId}
@@ -121,7 +123,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
               </p>}
               {(this.state.progressBarValue > 0 || this.state.progressBarIndeterminate) &&
               <IonProgressBar value={this.state.progressBarValue} type={this.state.progressBarIndeterminate ? 'indeterminate' : 'determinate'}/>}
-            </div>
+            </div>}
           </div>
         </div>
         <TransitionGroup>
@@ -129,7 +131,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
             <Switch location={this.props.location}>
               <Route path={`${this.props.match.path}/attribution`} render={() => (
                 <Modal title='Edit Attribution' onClose={() => this.props.history.push(this.props.match.url)}>
-                  <EditAttribution onClose={() => this.props.history.push(this.props.match.url)} />
+                  <EditAttribution onClose={() => this.props.history.push(this.props.match.url)} onAttributions={a => this.onAttributions(a)} />
                 </Modal>
               )}/>
             </Switch>
@@ -143,12 +145,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     this.loadMasterKey();
 
     if (this.props.location.state && this.props.location.state.fileTrees) {
-      console.log(this.props.location.state.fileTrees);
-      this.setState({fileTrees: this.props.location.state.fileTrees});
-
-      if (this.props.location.state.fileTrees.length > 0) {
-        this.setState({addFilesButtonDisabled: false});
-      }
+      this.props.context.setFileTrees(this.props.location.state.fileTrees);
     }
 
     this.setState({
@@ -192,10 +189,6 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     const xprv = e.target.value;
     this.setState({xprivkey: xprv});
     this.setState({moneyButtonDisabled: true});
-
-    if (xprv && xprv.startsWith('xprv') && this.state.fileTrees.length > 0) {
-      this.setState({addFilesButtonDisabled: false});
-    }
   }
 
   onDragOver(e: React.DragEvent<HTMLDivElement>) {
@@ -213,13 +206,8 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     this.setState({dragHighlight: false});
     if (e.dataTransfer.items) {
       const fileTrees = await FileTree.itemListToFileTrees(e.dataTransfer.items);
-      this.setState({
-        fileTrees: fileTrees,
-        moneyButtonDisabled: true
-      });
-      if (this.state.xprivkey) {
-        this.setState({addFilesButtonDisabled: false});
-      }
+      this.props.context.setFileTrees(fileTrees);
+      this.setState({moneyButtonProps: {}});
     }
   }
 
@@ -230,34 +218,28 @@ class AddFilesModal extends React.Component<AddFilesProps> {
         const file = this.fileInput.files[i];
         fileTrees.push(new FileTree(file.name, file));
       }
-      this.setState({
-        fileTrees: fileTrees,
-        moneyButtonDisabled: true
-      });
-      if (this.state.xprivkey) {
-        this.setState({addFilesButtonDisabled: false});
-      }
+      this.props.context.setFileTrees(fileTrees);
+      this.setState({moneyButtonProps: {}});
     }
   }
 
   async onFolderSelected(e: React.ChangeEvent<HTMLInputElement>) {
     if (this.folderInput && this.folderInput.files) {
-      this.setState({
-        fileTrees: FileTree.fileListToFileTrees(this.folderInput.files),
-        moneyButtonDisabled: true
-      });
-      if (this.state.xprivkey) {
-        this.setState({addFilesButtonDisabled: false});
-      }
+      this.props.context.setFileTrees(FileTree.fileListToFileTrees(this.folderInput.files));
+      this.setState({moneyButtonProps: {}});
     }
   }
 
   onAddFilesButton() {
     if (this.fileInput && this.fileInput.files) {
-      this.setState({addFilesButtonDisabled: true});
-      
-      this.generateOutputs(this.state.fileTrees);
+      this.generateOutputs(this.props.context.fileTrees);
     }
+  }
+
+  onAttributions(a: Attribution[]) {
+    console.log('onAttributions: ' + this.props.match.url);
+    this.setState({attributions: a});
+    this.props.history.push(this.props.match.url);
   }
 
   countFiles(fileTrees: FileTree[]) {
@@ -270,7 +252,6 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
   async generateOutputs(fileTrees: FileTree[]) {
     const moneyButtonProps = this.state.moneyButtonProps;
-    let moneyButtonDisabled = true;
 
     if (this.state.xprivkey) {
       // Transaction will create the root node as well as fund the root
@@ -281,7 +262,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       this.currentFileIndex = 0;
       this.maxFiles = this.countTxs(fileTrees);
 
-      const fee = await Metanet.estimateFileTreesFee(masterKey, this.props.parent, fileTrees, (name: string) => this.onEstimateFeeStatus(name));
+      const fee = await Metanet.estimateFileTreesFee(masterKey, this.props.parent, fileTrees, this.state.attributions, (name: string) => this.onEstimateFeeStatus(name));
 
       console.log(`Fee: ${fee}`);
 
@@ -290,12 +271,11 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       this.generateFundingOutputs(outputs, masterKey, this.props.parent, fileTrees);
 
       console.log('Money Button outputs', outputs);
-      moneyButtonDisabled = false;
       moneyButtonProps.outputs = outputs;
     } else {
       this.setState({message: 'No master key!'});
     }
-    this.setState({moneyButtonDisabled, moneyButtonProps, message: '', progressBarValue: 0});
+    this.setState({moneyButtonProps, message: '', progressBarValue: 0});
   }
 
   onEstimateFeeStatus(name: string) {
@@ -346,7 +326,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     console.log('funding txid: ' + fundingTxId);
 
     // Hide the moneybutton
-    this.setState({moneyButtonDisabled: true});
+    this.setState({moneyButtonProps: {}});
 
     await this.sendFiles(fundingTxId);
   }
@@ -360,12 +340,12 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
     this.setState({message: 'Sending files...'});
     this.currentFileIndex = 0;
-    this.maxFiles = this.countTxs(this.state.fileTrees);
+    this.maxFiles = this.countTxs(this.props.context.fileTrees);
 
     try {
       this.setState({progressBarIndeterminate: true});
       await Metanet.waitForUnconfirmedParents(fundingTxId, (message: string) => this.onWaitForUnconfirmedParentsCallback(message));
-      const txIds = await Metanet.sendFileTrees(masterKey, fundingTxId, this.props.parent, this.state.fileTrees, (name: string) => this.onSendFilesCallback(name));
+      const txIds = await Metanet.sendFileTrees(masterKey, fundingTxId, this.props.parent, this.props.context.fileTrees, (name: string) => this.onSendFilesCallback(name));
       console.log('Files added, txIds: ', txIds); 
       this.setState({message: `Waiting for transaction to appear...`});
       await Metanet.waitForTransactionToAppearOnPlanaria(txIds[0]);

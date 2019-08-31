@@ -11,6 +11,7 @@ import { MetanetNode } from '../metanet/metanet-node';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import EditAttribution from './EditAttribution';
 import { MasterKeyStorage } from '../storage/master-key-storage';
+import { Attribution } from '../storage/attribution';
 
 
 interface UploadModalProps extends RouteComponentProps {
@@ -27,6 +28,7 @@ interface UploadModalProps extends RouteComponentProps {
   onPrepareOutputs: Function;
   onPayment: Function;
   onError: Function;
+  onAttributions: Function;
 }
 
 const UploadModal = withRouter<UploadModalProps>(({
@@ -46,7 +48,8 @@ const UploadModal = withRouter<UploadModalProps>(({
     onClose, 
     onPrepareOutputs, 
     onPayment, 
-    onError}) => {
+    onError,
+    onAttributions}) => {
   const [xprivkey, setXprivKey] = useState('');
   const [internalUploadButtonDisabled, setInternalUploadButtonDisabled] = useState(true);
 
@@ -134,7 +137,7 @@ const UploadModal = withRouter<UploadModalProps>(({
           <Switch location={location}>
             <Route path={`${match.path}/attribution`} render={() => (
               <Modal title='Edit Attribution' onClose={() => history.push(match.url)}>
-                <EditAttribution onClose={() => history.push(match.url)} />
+                <EditAttribution onClose={() => history.push(match.url)} onAttributions={(a: Attribution[]) => onAttributions(a)} />
               </Modal>
             )}/>
           </Switch>

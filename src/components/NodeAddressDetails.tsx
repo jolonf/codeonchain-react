@@ -1,3 +1,4 @@
+import './NodeAddressDetails.css';
 
 import React from "react";
 import { IonButton, IonProgressBar, IonSpinner } from "@ionic/react";
@@ -6,6 +7,7 @@ import { Metanet } from "../metanet/metanet";
 import { MasterKeyStorage } from "../storage/master-key-storage";
 
 import bsv from 'bsv';
+import ProtocolView from './ProtocolView';
 
 interface NodeAddressDetailsProps {
   node: MetanetNode;
@@ -20,7 +22,8 @@ class NodeAddressDetails extends React.Component<NodeAddressDetailsProps> {
     masterKeyXprv: '',
     message: '',
     sending: false,
-    updatingBalance: true
+    updatingBalance: true,
+    protocols: [] as any[]
   };
 
   state = this.initialState;
@@ -40,27 +43,35 @@ class NodeAddressDetails extends React.Component<NodeAddressDetailsProps> {
             <input type='text' placeholder='Master Key xprv' value={this.state.masterKeyXprv} onChange={(e) => this.setState({masterKeyXprv: e.target.value})}/> 
           </p>
         </div>
-        <div id='buttons'>
-          <p><IonButton onClick={() => {this.props.onClose()}}>Close</IonButton></p>
-        </div>
         <div>
           {this.state.message &&
           <p>{this.state.message}</p>}
           {this.state.sending &&
           <IonProgressBar type='indeterminate'/>}
         </div>
+        <div>
+          <h4>Protocols:</h4>
+          <div className='protocols'>
+            {this.state.protocols.map((protocol, i) => <ProtocolView key={i} protocol={protocol} />)}
+          </div>
+        </div>
+        <div id='buttons'>
+          <p><IonButton onClick={() => {this.props.onClose()}}>Close</IonButton></p>
+        </div>
       </>
     );
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     this.updateBalance();
+    this.updateProtocols();
   }
 
   componentDidUpdate(prevProps: NodeAddressDetailsProps) {
     if (prevProps.node !== this.props.node) {
       this.setState(this.initialState);
       this.updateBalance();
+      this.updateProtocols();
     }
   }
 
@@ -80,6 +91,14 @@ class NodeAddressDetails extends React.Component<NodeAddressDetailsProps> {
       //console.log(`sats: ${sats}`);
       this.setState({sats: sats});
       this.setState({updatingBalance: false});
+    }
+  }
+
+  async updateProtocols() {
+    const protocols = await Metanet.getProtocols(this.props.node.nodeTxId);
+    console.log(protocols);
+    if (protocols) {
+      this.setState({protocols: protocols});
     }
   }
 

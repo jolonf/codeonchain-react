@@ -19,7 +19,12 @@ export class FileTree {
     // Recursively visit each FileTree
     let count = 0;
     for (const fileTree of this) {
-      count += fileTree.file ? 1 + Math.ceil(fileTree.file.size / MAX_TX_SIZE) : 1;
+      let parts = fileTree.file ? Math.ceil(fileTree.file.size / MAX_TX_SIZE) : 1;
+      // If there is more than one part then add one for the Bcat parent tx
+      if (parts > 1) {
+        parts++;
+      }
+      count += parts;
     }
     return count;
   }

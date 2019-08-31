@@ -3,6 +3,7 @@ import { LinkProtocol } from '../protocols/link.protocol';
 import { Metanet } from "./metanet";
 import { MetanetProtocol } from "../protocols/metanet.protocol";
 import { DataIntegrityProtocol } from '../protocols/data-integrity.protocol';
+import { Attribution } from "../storage/attribution";
 
 export class MetanetNode {
   nodeAddress = '';
@@ -22,6 +23,7 @@ export class MetanetNode {
   partTxIds = [] as string[]; // Parts for Bcat
   link = null as LinkProtocol | null;
   dataIntegrity = null as DataIntegrityProtocol | null;
+  attributions = [] as Attribution[];
 
   // Used during fee estimation
   fee = 0;
@@ -30,7 +32,7 @@ export class MetanetNode {
   // Used during sending to track used utxos
   spentVouts = [] as number[];
 
-  constructor(parentTxId = '', masterKey: any | null = null, derivationPath: string = '', name = '') {
+  constructor(masterKey: any | null = null, derivationPath: string = '', name = '', parentTxId = '') {
     this.parentTxId = parentTxId;
     if (masterKey && derivationPath) {
       this.derivationPath = derivationPath;
@@ -84,7 +86,7 @@ export class MetanetNode {
     let child = this.childWithName(fileName);
 
     if (!child) {
-      child = new MetanetNode(this.nodeTxId, masterKey, this.nextFreeDerivationPath(), fileName);
+      child = new MetanetNode(masterKey, this.nextFreeDerivationPath(), fileName, this.nodeTxId);
       child.parent = this;
     }
 
