@@ -45,6 +45,7 @@ export class Metanet {
     BProtocol,
     BcatProtocol,
     BcatPartProtocol,
+    DataIntegrityProtocol,
     DirectoryProtocol,
     LinkProtocol,
     DerivationPathProtocol,
@@ -179,6 +180,7 @@ export class Metanet {
       for (const output of item.out) {
         for (const cell of output.tape) {
           const protocolAddress = cell.cell[0].s;
+          console.log('protocolAddress: ' + protocolAddress);
           const protocol = this.protocols.find(p => p.address === protocolAddress);
           if (protocol) {
             protocols.push(protocol.fromCell(cell.cell as Cell))
@@ -455,7 +457,7 @@ export class Metanet {
     const payload = BProtocol.toASM(data, metanetNode.name, mimeType, ' ');
     const digest = await this.sha512(data);
     const dip = DataIntegrityProtocol.toASM('SHA-512', digest, '01', '01');
-    return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, ...dip]);
+    return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, '|', ...dip]);
   }
 
   static async fileDummyTx(masterKey: any, metanetNode: MetanetNode, data: Buffer | string, mimeType: string) {
@@ -475,7 +477,7 @@ export class Metanet {
     const payload = BcatProtocol.toASM(partTxIds, metanetNode.name, mimeType, ' ');
     const digest = await this.sha512(data);
     const dip = DataIntegrityProtocol.toASM('SHA-512', digest, '01', '01');
-    return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, ...dip]);
+    return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, '|', ...dip]);
   }
 
   static async bcatDummyTx(masterKey: any, metanetNode: MetanetNode, partTxIds: string[], data: Buffer | string, mimeType: string) {

@@ -16,10 +16,12 @@ export class DataIntegrityProtocol {
 
   static fromCell(cell: Cell[]): DataIntegrityProtocol {
     const dataIntegrity = new DataIntegrityProtocol();
-    dataIntegrity.algorithm  = cell[1].s;
-    dataIntegrity.digest = Buffer.from(cell[2].b || cell[2].lb, 'base64');
-    dataIntegrity.indexUnitSize = Buffer.from(cell[3].b, 'base64').toString('hex');
-    dataIntegrity.fieldIndex = Buffer.from(cell[4].b, 'base64').toString('hex');
+    dataIntegrity.algorithm       = cell[1].s;
+    if (cell[2].b || cell[2].lb) {
+      dataIntegrity.digest        = Buffer.from(cell[2].b || cell[2].lb, 'base64');
+      dataIntegrity.indexUnitSize = Buffer.from(cell[3].b, 'base64').toString('hex');
+      dataIntegrity.fieldIndex    = Buffer.from(cell[4].b, 'base64').toString('hex');
+    }
     return dataIntegrity;
   }
 

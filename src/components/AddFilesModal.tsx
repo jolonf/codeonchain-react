@@ -249,7 +249,6 @@ class AddFilesModal extends React.Component<AddFilesProps> {
   }
 
   onAttributions(a: Attribution[]) {
-    console.log('onAttributions: ' + this.props.match.url);
     this.props.attributions.setAttributions(a);
     this.props.history.push(this.props.match.url);
   }

@@ -14,7 +14,10 @@ const MyRepos = () => {
   const [message, setMessage] = useState({message: '', color: 'dark', duration: 1000, showCloseButton: false});
 
   useEffect(() => {
-    const masterKeys = MasterKeyStorage.getMasterKeys();
+    let masterKeys = MasterKeyStorage.getMasterKeys();
+    if (masterKeys) {
+      masterKeys = masterKeys.reverse();
+    }
     setMasterKeys(masterKeys);
     const masterKeysJSON = JSON.stringify(masterKeys, null, 2);
     setExportObjectUrl(URL.createObjectURL(new File([masterKeysJSON], 'masterkeys.json', { type: 'application/json' })));

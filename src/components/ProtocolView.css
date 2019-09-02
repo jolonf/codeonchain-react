@@ -26,6 +26,10 @@
   padding: 0px;
 }
 
+.protocol-value {
+  text-overflow: clip;
+}
+
 .right-align {
   text-align: right;
 }
