@@ -29,7 +29,7 @@ const ProtocolView: React.FunctionComponent<ProtocolProps> = ({protocol}) => {
               return (
                 <IonRow key={i} className='key-row'>
                   <IonCol size='3' className='label key'>{key}</IonCol>
-                  <IonCol>{value}</IonCol>
+                  <IonCol>{value && value.toString()}</IonCol>
                 </IonRow>
               );
             }

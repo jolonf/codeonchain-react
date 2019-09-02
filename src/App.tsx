@@ -23,6 +23,21 @@ import '@ionic/core/css/display.css';
 import { FileTree } from './metanet/file-tree';
 import { Attribution } from './storage/attribution';
 
+export interface NewRepoModalContext {
+  storeMasterKey: boolean;
+  setStoreMasterKey: (storeMasterKey: boolean) => void;
+  name: string;
+  setName: (name: string) => void;
+  description: string;
+  setDescription: (description: string) => void;
+  website: string;
+  setWebsite: (website: string) => void;
+  gitHub: string;
+  setGitHub: (gitHub: string) => void;
+  hidden: boolean;
+  setHidden: (hidden: boolean) => void;
+}
+
 export interface AddFilesModalContext {
   fileTrees: FileTree[];
   setFileTrees: (fileTrees: FileTree[]) => void;
@@ -46,6 +61,7 @@ export interface AttributionsContext {
 }
 
 interface AppContextInterface {
+  newRepoModal: NewRepoModalContext;
   addFilesModal: AddFilesModalContext;
   newFolderModal: NewFolderModalContext;
   newLinkModal: NewLinkModalContext;
@@ -57,23 +73,37 @@ export const AppContext = React.createContext<Partial<AppContextInterface>>({});
 class App extends React.Component<any, AppContextInterface> { 
 
   readonly state: AppContextInterface = {
+    newRepoModal: {
+      storeMasterKey: true,
+      setStoreMasterKey: (storeMasterKey: boolean) => this.setState(state => ({newRepoModal: {...state.newRepoModal, storeMasterKey}})),
+      name: '',
+      setName: (name: string) => this.setState(state => ({newRepoModal: {...state.newRepoModal, name: name}})),
+      description: '',
+      setDescription: (description: string) => this.setState(state => ({newRepoModal: {...state.newRepoModal, description}})),
+      website: '',
+      setWebsite: (website: string) => this.setState(state => ({newRepoModal: {...state.newRepoModal, website}})),
+      gitHub: '',
+      setGitHub: (gitHub: string) => this.setState(state => ({newRepoModal: {...state.newRepoModal, gitHub}})),
+      hidden: false,
+      setHidden: (hidden: boolean) => this.setState(state => ({newRepoModal: {...state.newRepoModal, hidden}}))
+    },
     addFilesModal: {
       fileTrees: [],
-      setFileTrees: (fileTrees: FileTree[]) => this.setState(state => Object({addFilesModal: {...state.addFilesModal, fileTrees}}))
+      setFileTrees: (fileTrees: FileTree[]) => this.setState(state => ({addFilesModal: {...state.addFilesModal, fileTrees}}))
     },
     newFolderModal: {
       name: '',
-      setName: (name: string) => this.setState(state => Object({newFolderModal: {...state.newFolderModal, name}}))
+      setName: (name: string) => this.setState(state => ({newFolderModal: {...state.newFolderModal, name}}))
     },
     newLinkModal: {
       txId: '',
-      setTxId: (txId: string) => this.setState(state => Object({newLinkModal: {...state.newLinkModal, txId}})),
+      setTxId: (txId: string) => this.setState(state => ({newLinkModal: {...state.newLinkModal, txId}})),
       name: '',
-      setName: (name: string) => this.setState(state => Object({newLinkModal: {...state.newLinkModal, name}}))
+      setName: (name: string) => this.setState(state => ({newLinkModal: {...state.newLinkModal, name}}))
     },
     attributions: {
       attributions: [],
-      setAttributions: (attributions: Attribution[]) => this.setState(state => Object({attributions: {...state.attributions, attributions}}))      
+      setAttributions: (attributions: Attribution[]) => this.setState(state => ({attributions: {...state.attributions, attributions}}))      
     }
   };
 

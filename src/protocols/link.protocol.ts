@@ -18,7 +18,7 @@ export class LinkProtocol {
     const link = new LinkProtocol();
     link.txId         = cell[1].s;
     link.name         = cell[2].s;
-    link.mimeType     = cell[3].s;
+    link.mimeType     = cell[3] && cell[3].s;
     for (let i = 4; i < cell.length; i++) {
       link.protocolHints.push(cell[i].s);
     }

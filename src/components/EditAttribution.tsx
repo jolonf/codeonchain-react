@@ -177,7 +177,7 @@ class EditAttribution extends React.Component<EditAttributionProps> {
     if (this.state.saveLocalStorage) {
       AttributionStorage.storeAttributions(attributions);
     }
-    this.props.onAttributions(attributions);
+    this.props.onAttributions(attributions.filter(a => a.include));
   }
 }
 

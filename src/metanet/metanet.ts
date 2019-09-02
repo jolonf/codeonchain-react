@@ -16,6 +16,7 @@ import { LinkProtocol } from '../protocols/link.protocol';
 import { DataIntegrityProtocol } from '../protocols/data-integrity.protocol';
 import { Attribution } from '../storage/attribution';
 import { AttributionProtocol } from '../protocols/attribution.protocol';
+import { RepoProtocol } from '../protocols/repo.protocol';
 
 export const METANET_FLAG     = 'meta';
 export const MIN_OUTPUT_VALUE = 546;
@@ -46,7 +47,8 @@ export class Metanet {
     BcatPartProtocol,
     DirectoryProtocol,
     LinkProtocol,
-    DerivationPathProtocol
+    DerivationPathProtocol,
+    RepoProtocol
   ] as any[];
 
   static fileProtocols = [
@@ -233,8 +235,7 @@ export class Metanet {
    * Estimates fees to send txs represented by the files in the array of file trees.
    * @param fileTrees 
    */
-  static async estimateFileTreesFee(masterKey: any, parent: MetanetNode, fileTrees: FileTree[], attributions: Attribution[], callback: Function): Promise<number> {
-    let fee = 0;
+  static async estimateFileTreesFee(masterKey: any, parent: MetanetNode, fileTrees: FileTree[], attributions: Attribution[], callback: Function) {
 
     // If the fileTree already exists, get children
     if (parent.nodeTxId) {
@@ -274,25 +275,18 @@ export class Metanet {
           // Bcat
           await this.estimateBcatParts(metanetNode, buffer, callback);
           await this.bcatDummyTx(masterKey, metanetNode, metanetNode.partFees.map(() => '0'.repeat(64)), buffer, fileTree.file.type);
-          fee += metanetNode.partFees.reduce((sum, fee) => sum + fee);
         } else {
+          // B file
           await this.fileDummyTx(masterKey, metanetNode, buffer, fileTree.file.type);
         }
-        fee += metanetNode.fee;
         console.log(`file fee: ${metanetNode.fee}`);
       } else {
-        // Estimate fee for directory
-
         // Directory tx
         await this.folderDummyTx(masterKey, metanetNode);
-        fee += metanetNode.fee;
         console.log(`folder fee: ${metanetNode.fee}`);
-
-        fee += await this.estimateFileTreesFee(masterKey, metanetNode, fileTree.children, attributions, callback);
+        await this.estimateFileTreesFee(masterKey, metanetNode, fileTree.children, attributions, callback);
       }
     }
-
-    return fee;
   }
 
   static async estimateBcatParts(metanetNode: MetanetNode, data: Buffer, callback: Function) {
@@ -323,6 +317,7 @@ export class Metanet {
   static async sendFileTrees(masterKey: any, fundingTxId: string, parent: MetanetNode, fileTrees: FileTree[], callback: Function): Promise<string[]> {
     parent.spentVouts = [];
     const txIds = [] as string[];
+
     for (const fileTree of fileTrees) {
       callback(fileTree.name);
       let metanetNode = parent.childWithName(fileTree.name);

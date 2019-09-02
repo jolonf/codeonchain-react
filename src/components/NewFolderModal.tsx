@@ -183,6 +183,7 @@ class NewFolderModal extends React.Component<NewFolderProps> {
   async onPayment(arg: any) {
     const fundingTxId = arg.txid;
     console.log('funding txid: ' + fundingTxId);
+    this.setState({moneyButtonProps: {}});
     if (this.metanetNode) {
       this.props.parent.spentVouts = [];
       const masterKey = bsv.HDPrivateKey(this.state.xprivkey);

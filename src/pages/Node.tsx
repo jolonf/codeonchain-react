@@ -34,7 +34,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
 
   initialState = {
     metanetNode: new MetanetNode(),
-    children: [] as MetanetNode[],
+    children: null as MetanetNode[] | null,
     readme: '',
     fileData: null as (string | null), // File text or ObjectURL string
     repo: null as (Repo | null)
@@ -55,7 +55,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
             <>
               {metanetNode.attributions.length > 0 &&
               <NodeAttribution attributions={metanetNode.attributions}/>}
-              {this.state.children.length > 0 &&
+              {this.state.children && metanetNode.isDirectory && metanetNode.isDirectory() &&
               <NodeChildren metanetNode={this.state.metanetNode} children={this.state.children} />}
               {metanetNode.isDirectory && metanetNode.isDirectory() &&
               <DirectoryButtons />}
@@ -68,11 +68,11 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
 
                       <Route path={`${this.props.match.path}/add-files`} render={() => (
                         <AppContext.Consumer>
-                        { ({ addFilesModal }) =>
-                          <AddFilesModal context={addFilesModal!} onClose={() => this.props.history.push(this.props.match.url)} onFilesAdded={() => this.onFilesAdded()} parent={metanetNode} />
+                        { ({ addFilesModal, attributions }) => 
+                          <AddFilesModal context={addFilesModal!} attributions={attributions!} onClose={() => this.props.history.push(this.props.match.url)} onFilesAdded={() => this.onFilesAdded()} parent={metanetNode} />
                         }
                         </AppContext.Consumer>
-                    )}/>
+                      )}/>
                       <Route path={`${this.props.match.path}/new-folder`} render={() => (
                         <AppContext.Consumer>
                           { ({ newFolderModal, attributions }) =>
@@ -81,7 +81,11 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
                         </AppContext.Consumer>
                       )}/>
                       <Route path={`${this.props.match.path}/new-link`} render={() => (
-                        <NewLinkModal parent={this.state.metanetNode} onClose={() => this.props.history.push(this.props.match.url)} onFilesAdded={() => {this.onFilesAdded()}}/>
+                        <AppContext.Consumer>
+                          { ({ newLinkModal, attributions }) =>
+                            <NewLinkModal context={newLinkModal!} attributions={attributions!} parent={this.state.metanetNode} onClose={() => this.props.history.push(this.props.match.url)} onFilesAdded={() => {this.onFilesAdded()}}/>
+                          }
+                        </AppContext.Consumer>
                       )} />
                       <Route path={`${this.props.match.path}/details`} render={() => (
                         <Modal title='Node Details' onClose={() => {this.onCloseNodeAddressDetailsModal()}}>
@@ -192,7 +196,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     const txId = (metanetNode.link && metanetNode.link.txId) || metanetNode.nodeTxId;
 
     if (protocols.includes(BProtocol.address) || protocols.includes(BcatProtocol.address)) {
-      if (metanetNode.mimeType.startsWith('video')) {
+      if (metanetNode.mimeType.startsWith('video') || (metanetNode.mimeType.startsWith('image') && !(metanetNode.mimeType === 'image/svg+xml'))) {
         this.setState({fileData: `https://bico.media/${txId}`});
       } else {
         let buffer;
@@ -202,19 +206,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
         } else if (metanetNode.protocol === BcatProtocol.address) {
           buffer = await Metanet.getBcatData(metanetNode.partTxIds);
         }
-
-        if (metanetNode.mimeType === 'image/svg+xml') {
-          // SVG
-          this.setState({fileData: (buffer && buffer.toString()) || metanetNode.dataString});
-        } else if (metanetNode.mimeType.startsWith('image/')) {
-          // Image
-          const blob = new Blob([buffer || Buffer.from(metanetNode.dataBase64, 'base64').buffer]);
-          const url = URL.createObjectURL(blob);
-          this.setState({fileData: url});
-        } else {
-          // Text
-          this.setState({fileData: (buffer && buffer.toString()) || metanetNode.dataString});
-        }
+        this.setState({fileData: (buffer && buffer.toString()) || metanetNode.dataString});
       }
     }
   }

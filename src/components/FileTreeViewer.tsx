@@ -16,7 +16,7 @@ export class FileTreeViewer extends React.Component<FileTreeViewerProps> {
 
     const items = this.props.fileTrees.map((fileTree, i) => {
       return <li key={i}>
-        <IonIcon icon={fileTree.isDirectory() ? folder : document} color='medium'/> {fileTree.name}
+        <IonIcon icon={fileTree.isDirectory() ? folder : document} color='medium'/> {fileTree.name} <span className='file-size'>{fileTree.file && `(${fileTree.file.size} bytes)`}</span>
         {fileTree.isDirectory() ? <FileTreeViewer fileTrees={fileTree.children}/> : null}
       </li>;
     })

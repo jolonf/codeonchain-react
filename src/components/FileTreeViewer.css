@@ -1,3 +1,7 @@
 ul {
   list-style-type: none;
 }
+
+.file-size {
+  color: grey;
+}

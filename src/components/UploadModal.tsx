@@ -20,7 +20,7 @@ interface UploadModalProps extends RouteComponentProps {
   uploadButtonText: string;
   moneyButtonProps: any;
   message: string;
-  uploadButtonDisabled: boolean;
+  uploadButtonDisabled(): boolean;
   progressBarValue: number;
   progressBarIndeterminate: boolean;
   onMasterKey: (xprv: string) => void;
@@ -96,7 +96,7 @@ const UploadModal = withRouter<UploadModalProps>(({
           </div>
           <div>
             <IonButton onClick={() => onClose()} >Close</IonButton>
-            <IonButton onClick={() => onPrepareOutputs()} className='upload-button' disabled={uploadButtonDisabled || internalUploadButtonDisabled} color='success' >{uploadButtonText}</IonButton>
+            <IonButton onClick={() => onPrepareOutputs()} className='upload-button' disabled={uploadButtonDisabled() || internalUploadButtonDisabled} color='success' >{uploadButtonText}</IonButton>
           </div>
           <div className='empty-space' />
         </div>

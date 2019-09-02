@@ -65,3 +65,6 @@ div#banner {
   width: 200px;
 }
 
+#sign-in-container {
+  display: none;
+}

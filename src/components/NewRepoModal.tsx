@@ -7,16 +7,26 @@ import MoneyButton from '@moneybutton/react-money-button';
 
 import '../theme/variables.scss';
 import './Modal.css';
-import { Metanet, METANET_FLAG } from "../metanet/metanet";
+import { Metanet } from "../metanet/metanet";
 import { DirectoryProtocol } from '../protocols/directory.protocol';
 import { DerivationPathProtocol } from '../protocols/derivation-path.protocol';
-import { IonButton } from "@ionic/react";
+import { IonButton, IonCheckbox } from "@ionic/react";
 import { MetanetNode } from "../metanet/metanet-node";
 import { MasterKeyStorage } from "../storage/master-key-storage";
-import { RouteComponentProps, withRouter } from "react-router";
+import { RouteComponentProps, withRouter, Switch, Route } from "react-router";
+import { RepoProtocol } from "../protocols/repo.protocol";
+import { MetanetProtocol } from "../protocols/metanet.protocol";
+import { AttributionProtocol } from "../protocols/attribution.protocol";
+import { TransitionGroup, CSSTransition } from "react-transition-group";
+import Modal from "./Modal";
+import EditAttribution from "./EditAttribution";
+import { Attribution } from "../storage/attribution";
+import { NewRepoModalContext, AttributionsContext } from "../App";
 
 interface NewRepoProps extends RouteComponentProps {
   onClose: Function;
+  context: NewRepoModalContext;
+  attributions: AttributionsContext;
 }
 
 class NewRepoModal extends React.Component<NewRepoProps> {
@@ -24,42 +34,20 @@ class NewRepoModal extends React.Component<NewRepoProps> {
   state = {
     message: '',
     masterKey: bsv.HDPrivateKey(),
-    storeMasterKey: true,
-    repoName: '',
-    description: '',
-    author: '',
-    version: '',
-    github: '',
-    sponsor: '',
-    hidden: false,
-    moneyButtonDisabled: true,
-    moneyButtonProps: {} as any,
-    createRepoButtonDisabled: true
+    moneyButtonProps: {} as any
   };
-
-  bsvignoreData = '';
-  bsvpushData = '';
-  bsvignoreNode = null as MetanetNode | null;
-  bsvpushNode = null as MetanetNode | null;
 
   componentDidMount() {
     const masterKey = bsv.HDPrivateKey();
-    console.log('masterKey', masterKey);
+    //console.log('masterKey', masterKey);
 
-    this.bsvignoreNode = new MetanetNode(masterKey, 'm/0/0', '.bsvignore');
-    this.bsvpushNode = new MetanetNode(masterKey, 'm/0/1', 'bsvpush.json');
-    this.bsvignoreNode.mimeType = 'text/plain';
-    this.bsvpushNode.mimeType = 'application/json';
-  
-    this.setState({
-      moneyButtonDisabled: true,
-      createRepoButtonDisabled: true,
-      masterKey: masterKey
-    });
+    this.setState({masterKey: masterKey});
   }
 
   render() {
+    const createRepoButtonDisabled = !(this.state.masterKey && this.props.context.name);
     return (
+      <>
       <div id="overlay" onClick={() => this.props.onClose()}>
         <div id="dialog" onClick={(e) => {e.stopPropagation()}}>
           <h2 style={{marginTop: 0}}>New Repository</h2>
@@ -70,11 +58,11 @@ class NewRepoModal extends React.Component<NewRepoProps> {
               <div className='label'>Master key: </div>
               <div><input type='text' id='repo-master-key' size={64} readOnly value={this.state.masterKey.xprivkey} /></div>
               <div/>
-              <div><input type='checkbox' defaultChecked={this.state.storeMasterKey} id='store-master-key' onChange={(e) => this.onStoreMasterKeyChanged(e)}/><label htmlFor='store-master-key'> Store master key in local storage.</label><br/>
+              <div><IonCheckbox checked={this.props.context.storeMasterKey} id='store-master-key' onIonChange={(e) => this.onStoreMasterKeyChanged(e)}/><label htmlFor='store-master-key'> Store master key in local storage.</label><br/>
               <span className='input-note'>You must keep a copy of the master key to be able to make future changes to the repo.</span></div>
               
               <div className='label'>Repository Name: </div>
-              <div><input type='text' id='repo-name' onChange={(e) => this.onRepoNameChanged(e)} required placeholder='' size={80} /></div>
+              <div><input type='text' id='repo-name' defaultValue={this.props.context.name} onChange={(e) => this.onRepoNameChanged(e)} required placeholder='' size={80} /></div>
 
             </div>
           </fieldset>
@@ -84,32 +72,31 @@ class NewRepoModal extends React.Component<NewRepoProps> {
             <div className='form-grid'>
               
               <div className='label'>Description: </div>
-              <div><input type='text' id='repo-description' onChange={(e) => this.onDescriptionChanged(e)} placeholder='' size={80} /></div>
+              <div><input type='text' id='repo-description' defaultValue={this.props.context.description} onChange={(e) => this.onDescriptionChanged(e)} placeholder='' size={80} /></div>
               
-              <div className='label'>Author: </div>
-              <div><input type='text' id='repo-author' onChange={(e) => this.onAuthorChanged(e)} placeholder='' size={80} /></div>
-              
-              <div className='label'>Version: </div>
-              <div><input type='text' id='repo-version' onChange={(e) => this.onVersionChanged(e)} defaultValue='0.0.1' size={80} /></div>
-
+              <div className='label'>Website: </div>
+              <div><input type='text' id='repo-website' defaultValue={this.props.context.website} onChange={(e) => this.onWebsiteChanged(e)} placeholder='' size={80} /></div>
+                         
               <div className='label'>GitHub: </div>
-              <div><input type='text' id='repo-github' onChange={(e) => this.onGitHubChanged(e)} placeholder='e.g. http://github.com/<username>' size={80} /></div>
-                            
-              <div className='label'>Sponsor: </div>
-              <div><input type='text' id='repo-sponsor' onChange={(e) => this.onSponsorChanged(e)} placeholder='Paymail, BSV address, or MoneyButton id' size={80} /></div>
-              
+              <div><input type='text' id='repo-github' defaultValue={this.props.context.gitHub} onChange={(e) => this.onGitHubChanged(e)} placeholder='e.g. http://github.com/<username>' size={80} /></div>
+
               <div className='label hidden'>Hidden: </div>
-              <div className='hidden'><input type='checkbox' id='repo-hidden' onChange={(e) => this.onHiddenChanged(e)} /><label className='checkbox-input' htmlFor='repo-hidden'> Hide from listing on Codeonchain</label></div>
+              <div className='hidden'><IonCheckbox id='repo-hidden' checked={this.props.context.hidden} onIonChange={(e) => this.onHiddenChanged(e)} /><label className='checkbox-input' htmlFor='repo-hidden'> Hide from listing on Codeonchain</label></div>
 
             </div>
           </fieldset>
-
-          <div id='buttons'>
+          <div className='upload-buttons'>
+            <div className='attribution-container'>
+              <IonButton href={`${this.props.match.url}/attribution`} className='attribution-button' color='dark' fill='outline' disabled={false}>Attribution...</IonButton>
+            </div>
             <div>
               <IonButton onClick={() => this.props.onClose()}>Close</IonButton>
-              <IonButton onClick={() => this.generateOutputs()} color='success' disabled={this.state.createRepoButtonDisabled}>Create Repo</IonButton>
+              <IonButton onClick={() => this.generateOutputs()} color='success' disabled={createRepoButtonDisabled}>Create Repo</IonButton>
             </div>
-            {!this.state.moneyButtonDisabled && 
+          </div> 
+          <div id='buttons'>
+
+            {this.state.moneyButtonProps.outputs && 
               (
                 <div id='dialog-money-button-container'>
                   <p>
@@ -117,10 +104,9 @@ class NewRepoModal extends React.Component<NewRepoProps> {
                   </p>
                   <div id='money-button-encapsulator'>
                     <MoneyButton 
-                      disabled={this.state.moneyButtonDisabled}
                       label='Create'
                       successMessage='Funded'
-                      buttonId={this.state.repoName}
+                      buttonId={this.props.context.name}
                       clientIdentifier='3fb24dea420791729b4d9b39703c6339'
                       type='buy'
                       onPayment={(args: any) => this.onPayment(args)}
@@ -137,10 +123,22 @@ class NewRepoModal extends React.Component<NewRepoProps> {
           </div>
         </div>
       </div>
+      <TransitionGroup>
+        <CSSTransition key={this.props.location.key} classNames='fade' timeout={300}>
+          <Switch location={this.props.location}>
+            <Route path={`${this.props.match.path}/attribution`} render={() => (
+              <Modal title='Edit Attribution' onClose={() => this.props.history.push(this.props.match.url)}>
+                <EditAttribution onClose={() => this.props.history.push(this.props.match.url)} onAttributions={(a: Attribution[]) => this.onAttributions(a)} />
+              </Modal>
+            )}/>
+          </Switch>
+        </CSSTransition>
+      </TransitionGroup>
+      </>
     );
   }
 
-  onStoreMasterKeyChanged(e: React.ChangeEvent<HTMLInputElement>) {
+  onStoreMasterKeyChanged(e: any) {
     this.setState({storeMasterKey: e.target.value === 'on'});
     if (e.target.value === 'on') {
       if (!window.localStorage) {
@@ -148,132 +146,91 @@ class NewRepoModal extends React.Component<NewRepoProps> {
       }
     }
   }
+  
   onRepoNameChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    this.setState({repoName: e.target.value});
-    this.setState({moneyButtonDisabled: true});
-    this.setState({createRepoButtonDisabled: !e.target.value});
+    this.props.context.setName(e.target.value);
+    this.setState({moneyButtonProps: {}});
   }
+
   onDescriptionChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    this.setState({description: e.target.value});
-    this.setState({moneyButtonDisabled: true});
+    this.props.context.setDescription(e.target.value);
+    this.setState({moneyButtonProps: {}});
   }
-  onAuthorChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    this.setState({author: e.target.value});
-    this.setState({moneyButtonDisabled: true});
+
+  onWebsiteChanged(e: React.ChangeEvent<HTMLInputElement>) {
+    this.props.context.setWebsite(e.target.value);
+    this.setState({moneyButtonProps: {}});;
   }
-  onVersionChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    this.setState({version: e.target.value});
-    this.setState({moneyButtonDisabled: true});
-  }
+
   onGitHubChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    this.setState({github: e.target.value});
-    this.setState({moneyButtonDisabled: true});
+    this.props.context.setGitHub(e.target.value);
+    this.setState({moneyButtonProps: {}});
   }
-  onSponsorChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    this.setState({sponsor: e.target.value});
-    this.setState({moneyButtonDisabled: true});
+
+  onHiddenChanged(e: any) {
+    this.props.context.setHidden(e.target.value);
+    this.setState({moneyButtonProps: {}});
   }
-  onHiddenChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    this.setState({hidden: e.target.value === 'on'});
-    this.setState({moneyButtonDisabled: true});
+
+  onAttributions(attributions: Attribution[]) {
+    this.props.attributions.setAttributions(attributions);
+    this.props.history.push(this.props.match.url);
   }
 
   async generateOutputs() {
     const moneyButtonProps = this.state.moneyButtonProps;
-    let moneyButtonDisabled = true;
 
-    if (this.state.repoName) {
+    if (this.props.context.name) {
       // Transaction will create the root node as well as fund the root
       // so that the .bsvignore and bsvpush.json files can be created
-      const rootNode = new MetanetNode(this.state.masterKey, 'm/0', this.state.repoName);
+      const rootNode = new MetanetNode(this.state.masterKey, 'm/0', this.props.context.name);
 
-      this.bsvignoreData = `.bsvpush\n.git`;
-      this.bsvpushData = JSON.stringify({
-        name: this.state.repoName,
-        description: this.state.description,
-        author: this.state.author,
-        version: this.state.version,
-        github: this.state.github,
-        sponsor: {to: this.state.sponsor},
-        hidden: this.state.hidden,
-        test: true
-      }, null, 2);
+      rootNode.attributions = this.props.attributions.attributions;
 
-      if (this.bsvignoreNode && this.bsvpushNode) {
-        this.bsvignoreNode.parent = rootNode;
-        this.bsvpushNode.parent = rootNode;
+      const repoProtocol = new RepoProtocol();
+      repoProtocol.name = this.props.context.name;
+      repoProtocol.description = this.props.context.description;
+      repoProtocol.website = this.props.context.website;
+      repoProtocol.github = this.props.context.gitHub;
+      repoProtocol.hidden = this.props.context.hidden;
 
-        // We aren't sending these transactions yet, just estimating the size to fund the parent
-        await Metanet.fileDummyTx(this.state.masterKey, this.bsvignoreNode, this.bsvignoreData, this.bsvignoreNode.mimeType);
-        await Metanet.fileDummyTx(this.state.masterKey, this.bsvpushNode, this.bsvpushData, this.bsvpushNode.mimeType);
+      const opReturnPayload = [
+        ...MetanetProtocol.toASM(rootNode.nodeAddress, 'NULL'), 
+        '|',
+        ...repoProtocol.toASM(),
+        '|',
+        ...DirectoryProtocol.toASM(this.props.context.name),
+        '|',
+        ...DerivationPathProtocol.toASM(rootNode.derivationPath),
+        ...rootNode.attributions.map(a => ['|', ...AttributionProtocol.toASM(a)]).flat(1)
+      ];
+  
+      const outputs = [
+        {
+          "type": "SCRIPT",
+          "script": ['OP_FALSE', 'OP_RETURN', ...Metanet.arrayToHexStrings(opReturnPayload)].join(' '),
+          "amount": "0",
+          "currency": "BSV"
+        }
+      ];
 
-        const opReturnPayload = [
-          METANET_FLAG,
-          rootNode.nodeAddress,
-          'NULL',
-          '|',
-          DirectoryProtocol.address,
-          this.state.repoName,
-          '|',
-          DerivationPathProtocol.address,
-          'm/0'
-        ];
-
-        const outputs = [
-          {
-            "type": "SCRIPT",
-            "script": ['OP_FALSE', 'OP_RETURN', ...Metanet.arrayToHexStrings(opReturnPayload)].join(' '),
-            "amount": "0",
-            "currency": "BSV"
-          },
-          {
-            "to": rootNode.nodeAddress, // Root funds children
-            "amount": this.bsvignoreNode.fee / 1e8,
-            "currency": "BSV"
-          },
-          {
-            "to": rootNode.nodeAddress, // Root funds children
-            "amount": this.bsvpushNode.fee / 1e8,
-            "currency": "BSV"
-          }
-        ];
-
-        moneyButtonDisabled = false;
-        moneyButtonProps.outputs = outputs;
-      }
+      moneyButtonProps.outputs = outputs;
     }
-    this.setState({moneyButtonDisabled, moneyButtonProps});
+    this.setState({moneyButtonProps});
   }
 
   async onPayment(arg: any) {
-    this.setState({message: 'Initialising repo...'});
     const fundingTxId = arg.txid;
     console.log('funding/parent txid: ' + fundingTxId);
 
-    if (this.state.storeMasterKey) {
-      MasterKeyStorage.storeMasterKey(this.state.masterKey, fundingTxId, this.state.repoName);
+    if (this.props.context.storeMasterKey) {
+      MasterKeyStorage.storeMasterKey(this.state.masterKey, fundingTxId, this.props.context.name);
     }
 
-    const rootNode = new MetanetNode(this.state.masterKey, 'm/0', this.state.repoName);
-
-    if (this.bsvignoreNode && this.bsvpushNode) {
-      this.bsvignoreNode.parentTxId = fundingTxId;
-      this.bsvignoreNode.parent = rootNode;
-      this.bsvpushNode.parentTxId = fundingTxId;
-      this.bsvpushNode.parent = rootNode;
-
-      const bsvignoreTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, this.bsvignoreNode, this.bsvignoreData, this.bsvignoreNode.mimeType);
-      const bsvpushTx = await Metanet.fileTx(this.state.masterKey, fundingTxId, this.bsvpushNode, this.bsvpushData, this.bsvpushNode.mimeType);
-
-      console.log(`Sending .bsvignore transaction: ${bsvignoreTx.id}`);
-      await Metanet.send(bsvignoreTx);
-      console.log(`Sending bsvpush.json transaction: ${bsvpushTx.id}`);
-      await Metanet.send(bsvpushTx);
-
-      console.log(`Repo created, view here https://codeonchain.network/tx/${fundingTxId}`);   
-      this.setState({message: `Repo created, loading...`});   
-      this.props.history.push(`/tx/${fundingTxId}`);
-    }
+    console.log(`Repo created, view here https://codeonchain.network/tx/${fundingTxId}`);   
+    this.setState({message: `Repo created, loading...`});   
+    this.setState({moneyButtonProps: {}});
+    this.props.history.push(`/tx/${fundingTxId}`);
   }
 
   onError(arg: any) {

@@ -4,6 +4,7 @@ import React from "react";
 
 import bsv from 'bsv';
 import MoneyButton from '@moneybutton/react-money-button';
+import { readAsText } from 'promise-file-reader';
 
 import './Modal.css';
 import './AddFilesModal.css';
@@ -21,13 +22,14 @@ import { TransitionGroup, CSSTransition } from "react-transition-group";
 import EditAttribution from "./EditAttribution";
 import Modal from "./Modal";
 import { Attribution } from "../storage/attribution";
-import { AddFilesModalContext } from "../App";
+import { AddFilesModalContext, AttributionsContext } from "../App";
 
 interface AddFilesProps extends RouteComponentProps {
   onClose: Function;
   onFilesAdded: Function;
   parent: MetanetNode;
   context: AddFilesModalContext;
+  attributions: AttributionsContext;
 }
 
 class AddFilesModal extends React.Component<AddFilesProps> {
@@ -38,8 +40,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     message: '',
     dragHighlight: false,
     progressBarValue: 0,
-    progressBarIndeterminate: false,
-    attributions: []
+    progressBarIndeterminate: false
   }
 
   fileInput: HTMLInputElement | null = null;
@@ -90,7 +91,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
                 <IonButton href={`${this.props.match.url}/attribution`} className='attribution-button' disabled={this.state.moneyButtonProps.outputs} color='dark' fill='outline'>Attribution...</IonButton>
               </div>
               <div>
-                <IonButton onClick={() => this.props.onClose()} >Close</IonButton>
+                <IonButton onClick={() => this.onClose()} >Close</IonButton>
                 <IonButton onClick={() => this.onAddFilesButton()} disabled={addFilesButtonDisabled} color='success' >Add Files</IonButton>
               </div>
               <div className='empty-space' />
@@ -141,11 +142,12 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     );
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     this.loadMasterKey();
 
     if (this.props.location.state && this.props.location.state.fileTrees) {
-      this.props.context.setFileTrees(this.props.location.state.fileTrees);
+      const fileTrees = await this.filterFiles(this.props.location.state.fileTrees);
+      this.props.context.setFileTrees(fileTrees);
     }
 
     this.setState({
@@ -205,7 +207,8 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     e.preventDefault();
     this.setState({dragHighlight: false});
     if (e.dataTransfer.items) {
-      const fileTrees = await FileTree.itemListToFileTrees(e.dataTransfer.items);
+      let fileTrees = await FileTree.itemListToFileTrees(e.dataTransfer.items);
+      fileTrees = await this.filterFiles(fileTrees);
       this.props.context.setFileTrees(fileTrees);
       this.setState({moneyButtonProps: {}});
     }
@@ -213,11 +216,12 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
   async onFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
     if (this.fileInput && this.fileInput.files) {
-      const fileTrees = [] as FileTree[];
+      let fileTrees = [] as FileTree[];
       for (let i = 0; i < this.fileInput.files.length; i++) {
         const file = this.fileInput.files[i];
         fileTrees.push(new FileTree(file.name, file));
       }
+      fileTrees = await this.filterFiles(fileTrees);
       this.props.context.setFileTrees(fileTrees);
       this.setState({moneyButtonProps: {}});
     }
@@ -225,9 +229,17 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
   async onFolderSelected(e: React.ChangeEvent<HTMLInputElement>) {
     if (this.folderInput && this.folderInput.files) {
-      this.props.context.setFileTrees(FileTree.fileListToFileTrees(this.folderInput.files));
+      let fileTrees = FileTree.fileListToFileTrees(this.folderInput.files);
+      fileTrees = await this.filterFiles(fileTrees);
+      this.props.context.setFileTrees(fileTrees);
       this.setState({moneyButtonProps: {}});
     }
+  }
+
+  onClose() {
+    // Clear the fileTrees for next time
+    this.props.context.setFileTrees([]);
+    this.props.onClose();
   }
 
   onAddFilesButton() {
@@ -238,8 +250,24 @@ class AddFilesModal extends React.Component<AddFilesProps> {
 
   onAttributions(a: Attribution[]) {
     console.log('onAttributions: ' + this.props.match.url);
-    this.setState({attributions: a});
+    this.props.attributions.setAttributions(a);
     this.props.history.push(this.props.match.url);
+  }
+
+  async filterFiles(fileTrees: FileTree[], ignoreList = [] as string[]): Promise<FileTree[]> {
+    // If there is a .bsvignore file, read it in and append to the ignore list
+    const bsvignoreFile = fileTrees.find(fileTree => fileTree.name === '.bsvignore');
+    if (bsvignoreFile) {
+      const text = await readAsText(bsvignoreFile.file) as string;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      ignoreList = [...ignoreList, ...lines];
+    }
+    fileTrees = fileTrees.filter(fileTree => !ignoreList.includes(fileTree.name));
+
+    for (const fileTree of fileTrees) {
+      fileTree.children = await this.filterFiles(fileTree.children, ignoreList);
+    }
+    return fileTrees;
   }
 
   countFiles(fileTrees: FileTree[]) {
@@ -261,15 +289,10 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       this.setState({message: 'Estimating fees...'});
       this.currentFileIndex = 0;
       this.maxFiles = this.countTxs(fileTrees);
-
-      const fee = await Metanet.estimateFileTreesFee(masterKey, this.props.parent, fileTrees, this.state.attributions, (name: string) => this.onEstimateFeeStatus(name));
-
-      console.log(`Fee: ${fee}`);
+      await Metanet.estimateFileTreesFee(masterKey, this.props.parent, fileTrees, this.props.attributions.attributions, (name: string) => this.onEstimateFeeStatus(name));
 
       const outputs = [] as any[];
-
       this.generateFundingOutputs(outputs, masterKey, this.props.parent, fileTrees);
-
       console.log('Money Button outputs', outputs);
       moneyButtonProps.outputs = outputs;
     } else {
@@ -351,6 +374,8 @@ class AddFilesModal extends React.Component<AddFilesProps> {
       await Metanet.waitForTransactionToAppearOnPlanaria(txIds[0]);
       this.setState({progressBarIndeterminate: false});
       this.setState({message: `Files Added`});
+      // Clear file trees for next time
+      this.props.context.setFileTrees([]);
       this.props.onFilesAdded();
     } catch (error) {
       console.log('Error sending files', error); 

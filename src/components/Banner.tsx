@@ -7,6 +7,7 @@ import '../globals.scss';
 import { Link, withRouter, Route, Switch } from 'react-router-dom';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import Modal from './Modal';
+import { AppContext } from '../App';
 
 const Banner = withRouter(({history, match, location}) => {
 
@@ -44,7 +45,11 @@ const Banner = withRouter(({history, match, location}) => {
         <CSSTransition key={location.key} classNames='fade' timeout={300}>
           <Switch location={location}>
             <Route path={`${basePath}/new-repo`} render={() => (
-              <NewRepoModal onClose={() => history.push(baseURL)}/>
+              <AppContext.Consumer>
+              { ({ newRepoModal, attributions }) =>
+                <NewRepoModal context={newRepoModal!} attributions={attributions!} onClose={() => history.push(baseURL)}/>
+              }
+              </AppContext.Consumer>
             )}/>
             <Route path={`${basePath}/sign-in`} render={() => (
               <Modal title='Sign In' onClose={() => history.push(match.url)}>

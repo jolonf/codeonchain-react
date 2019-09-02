@@ -3,6 +3,7 @@ import { LinkProtocol } from '../protocols/link.protocol';
 import { Metanet } from "./metanet";
 import { MetanetProtocol } from "../protocols/metanet.protocol";
 import { DataIntegrityProtocol } from '../protocols/data-integrity.protocol';
+import { RepoProtocol } from '../protocols/repo.protocol';
 import { Attribution } from "../storage/attribution";
 
 export class MetanetNode {
@@ -24,6 +25,7 @@ export class MetanetNode {
   link = null as LinkProtocol | null;
   dataIntegrity = null as DataIntegrityProtocol | null;
   attributions = [] as Attribution[];
+  repo = null as RepoProtocol | null;
 
   // Used during fee estimation
   fee = 0;
