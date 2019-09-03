@@ -67,7 +67,8 @@ class FeaturedRepos extends React.Component {
 
   async componentDidMount() {
     const featuredTransactions = [
-      '6ebb4e4966f86f523bbef8a7268df640b5a9fcc11f2bd96c90c2428575703865' // codeonchain-react
+      '6ebb4e4966f86f523bbef8a7268df640b5a9fcc11f2bd96c90c2428575703865', // codeonchain-react
+      'a06d7f19675384d8de54e73e64c87644f0f29350eb4f5fbea230b5803981ac99', // Onchain Videos
     ];
     this.setState({repos: await Metanet.getMetanetNodesByTxIds(featuredTransactions)});
   }
