@@ -125,6 +125,7 @@ ion-icon {
   margin-top: 5px;
   margin-bottom: 10px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
 }
 
@@ -202,6 +203,7 @@ div#file-data {
 }
 
 .video-data {
+  width: 100%;
   max-width: var(--width);
 }
 

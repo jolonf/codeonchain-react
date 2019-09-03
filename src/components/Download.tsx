@@ -46,17 +46,21 @@ class Download extends React.Component<DownloadProps> {
   async download(zip: JSZip, node: MetanetNode, path = '') {
     this.setState({message: `Zipping: ${path}/${node.name}`});
 
-    // Don't follow links
-    if (!node.isLink()) {
-      if (node.isDirectory()) {
-        const folder = zip.folder(node.name);
-        const children = await Metanet.getChildren(node.nodeAddress, node.nodeTxId, true);
-        for (const child of children) {
-          await this.download(folder, child, path + '/' + node.name);
-        }
-      } else {
-        zip.file(node.name, node.dataBase64, {base64: true});
+    if (node.isDirectory()) {
+      const folder = zip.folder(node.name);
+      const children = await Metanet.getChildren(node.nodeAddress, node.nodeTxId, true);
+      for (const child of children) {
+        await this.download(folder, child, path + '/' + node.name);
       }
+    } else if (node.isLink()) {
+      const json = {
+        link: {
+          txId: node.link!.txId
+        }
+      }
+      zip.file(node.name, JSON.stringify(json, null, 2));
+    } else {
+      zip.file(node.name, node.dataBase64, {base64: true});
     }
   }
 
