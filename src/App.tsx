@@ -22,6 +22,8 @@ import '@ionic/core/css/flex-utils.css';
 import '@ionic/core/css/display.css';
 import { FileTree } from './metanet/file-tree';
 import { Attribution } from './storage/attribution';
+import { MasterKeyEntry, MasterKeyStorage } from './storage/master-key-storage';
+import { AttributionStorage } from './storage/attribution-storage';
 
 export interface NewRepoModalContext {
   xprv: string;
@@ -62,12 +64,19 @@ export interface AttributionsContext {
   setAttributions: (attributions: Attribution[]) => void;
 }
 
+export interface MasterKeysContext {
+  masterKeys: MasterKeyEntry[];
+  storeMasterKey(xprv: string, txId: string, repoName: string): void;
+  importFromJSON(json: any): void;
+}
+
 interface AppContextInterface {
   newRepoModal: NewRepoModalContext;
   addFilesModal: AddFilesModalContext;
   newFolderModal: NewFolderModalContext;
   newLinkModal: NewLinkModalContext;
   attributions: AttributionsContext;
+  masterKeys: MasterKeysContext;
 };
 
 export const AppContext = React.createContext<Partial<AppContextInterface>>({});
@@ -89,7 +98,7 @@ class App extends React.Component<any, AppContextInterface> {
       gitHub: '',
       setGitHub: (gitHub: string) => this.setState(state => ({newRepoModal: {...state.newRepoModal, gitHub}})),
       hidden: false,
-      setHidden: (hidden: boolean) => this.setState(state => ({newRepoModal: {...state.newRepoModal, hidden}}))
+      setHidden: (hidden: boolean) => this.setState(state => ({newRepoModal: {...state.newRepoModal, hidden}})),
     },
     addFilesModal: {
       fileTrees: [],
@@ -107,12 +116,26 @@ class App extends React.Component<any, AppContextInterface> {
     },
     attributions: {
       attributions: [],
-      setAttributions: (attributions: Attribution[]) => this.setState(state => ({attributions: {...state.attributions, attributions}}))      
+      setAttributions: (attributions: Attribution[]) => {
+        AttributionStorage.storeAttributions(attributions);
+        this.setState(state => ({attributions: {...state.attributions, attributions}}));
+      }     
+    },
+    masterKeys: {
+      masterKeys: [],
+      storeMasterKey: (xprv: string, txId: string, repoName: string) => {
+        const masterKeys = MasterKeyStorage.storeMasterKey(xprv, txId, repoName) || [];
+        this.setState(state => ({masterKeys: {...state.masterKeys, masterKeys: masterKeys}}));
+      },
+      importFromJSON: (json: any) => {
+        const masterKeys = MasterKeyStorage.importFromJSON(json) || [];
+        this.setState(state => ({masterKeys: {...state.masterKeys, masterKeys}}));
+      }
     }
   };
 
-  render = () =>
-    (
+  render() {
+    return (
       <AppContext.Provider value={this.state}>
         <IonApp>
           <IonReactRouter>
@@ -126,7 +149,14 @@ class App extends React.Component<any, AppContextInterface> {
         </IonApp>
       </AppContext.Provider>
     );
+  }
 
+  componentDidMount() {
+    const attributions = AttributionStorage.getAttributions() || [];
+    this.setState(state => ({attributions: {...state.attributions, attributions}}));
+    const masterKeys = MasterKeyStorage.getMasterKeys() || [];
+    this.setState(state => ({masterKeys: {...state.masterKeys, masterKeys}}));
+  }
 };
 
 export default App;

@@ -48,8 +48,8 @@ const Banner = withRouter(({history, match, location}) => {
           <Switch location={location}>
             <Route path={`${basePath}/new-repo`} render={() => (
               <AppContext.Consumer>
-              { ({ newRepoModal, attributions }) =>
-                <NewRepoModal context={newRepoModal!} attributions={attributions!} onClose={() => history.push(baseURL)}/>
+              { ({ newRepoModal, attributions, masterKeys }) =>
+                <NewRepoModal context={newRepoModal!} attributions={attributions!} masterKeys={masterKeys!} onClose={() => history.push(baseURL)}/>
               }
               </AppContext.Consumer>
             )}/>

@@ -12,7 +12,6 @@ import { DirectoryProtocol } from '../protocols/directory.protocol';
 import { DerivationPathProtocol } from '../protocols/derivation-path.protocol';
 import { IonButton, IonCheckbox } from "@ionic/react";
 import { MetanetNode } from "../metanet/metanet-node";
-import { MasterKeyStorage } from "../storage/master-key-storage";
 import { RouteComponentProps, withRouter, Switch, Route } from "react-router";
 import { RepoProtocol } from "../protocols/repo.protocol";
 import { MetanetProtocol } from "../protocols/metanet.protocol";
@@ -21,12 +20,13 @@ import { TransitionGroup, CSSTransition } from "react-transition-group";
 import Modal from "./Modal";
 import EditAttribution from "./EditAttribution";
 import { Attribution } from "../storage/attribution";
-import { NewRepoModalContext, AttributionsContext } from "../App";
+import { NewRepoModalContext, AttributionsContext, MasterKeysContext } from "../App";
 
 interface NewRepoProps extends RouteComponentProps {
   onClose: Function;
   context: NewRepoModalContext;
   attributions: AttributionsContext;
+  masterKeys: MasterKeysContext;
 }
 
 class NewRepoModal extends React.Component<NewRepoProps> {
@@ -53,7 +53,7 @@ class NewRepoModal extends React.Component<NewRepoProps> {
           <fieldset className='form-group'>
             <legend>Required</legend>
             <div className='form-grid'>
-              
+
               <div className='label'>Master key: </div>
               <div><input type='text' id='repo-master-key' size={64} onChange={e => this.onMasterKeyChanged(e)} defaultValue={this.props.context.xprv} /></div>
               <div/>
@@ -232,14 +232,17 @@ class NewRepoModal extends React.Component<NewRepoProps> {
   async onPayment(arg: any) {
     const fundingTxId = arg.txid;
     console.log('funding/parent txid: ' + fundingTxId);
+    this.setState({moneyButtonProps: {}});
 
     if (this.props.context.storeMasterKey) {
-      MasterKeyStorage.storeMasterKey(this.props.context.xprv, fundingTxId, this.props.context.name);
+      this.props.masterKeys.storeMasterKey(this.props.context.xprv, fundingTxId, this.props.context.name);
     }
 
     console.log(`Repo created, view here https://codeonchain.network/tx/${fundingTxId}`);   
+    this.setState({message: `Waiting for transaction to appear...`});  
+    await Metanet.waitForTransactionToAppearOnPlanaria(fundingTxId);
     this.setState({message: `Repo created, loading...`});   
-    this.setState({moneyButtonProps: {}});
+
     this.props.context.setXprv('');
     this.props.history.push(`/tx/${fundingTxId}`);
   }

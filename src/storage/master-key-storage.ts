@@ -22,7 +22,7 @@ export class MasterKeyStorage {
     }
   }
 
-  static storeMasterKey(xprv: string, txId: string, repoName: string) {
+  static storeMasterKey(xprv: string, txId: string, repoName: string): MasterKeyEntry[] | undefined {
     // Retrieve
     if (window.localStorage) {
       let masterKeysJson = window.localStorage.masterKeys;
@@ -46,6 +46,7 @@ export class MasterKeyStorage {
 
       window.localStorage.masterKeys = JSON.stringify(masterKeys, null, 2);
 
+      return masterKeys;
     } else {
       console.log('No local storage to store master key!');
     }

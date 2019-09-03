@@ -12,6 +12,7 @@ import { Switch, Route, RouteComponentProps } from 'react-router';
 import { Link } from 'react-router-dom';
 import { Metanet } from '../metanet/metanet';
 import { MetanetNode } from '../metanet/metanet-node';
+import { AppContext } from '../App';
 
 class Home extends React.Component<RouteComponentProps> {
 
@@ -29,7 +30,13 @@ class Home extends React.Component<RouteComponentProps> {
 
             <Route path='/featured-repos' component={FeaturedRepos}/>
             <Route path='/recent-repos' component={RecentRepos}/>
-            <Route path='/' component={MyRepos}/>
+            <Route path='/' render={() =>
+              <AppContext.Consumer>
+                {({ masterKeys }) =>
+                  <MyRepos masterKeys= {masterKeys!} />
+                }
+              </AppContext.Consumer>
+            }/>
           </Switch>
           <p id='footer-message'>
             Metanet
