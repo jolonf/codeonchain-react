@@ -13,7 +13,6 @@ interface MyReposProps {
 class MyRepos extends React.Component<MyReposProps> {
 
   readonly state = {
-    loaded: false,
     message: {message: '', color: 'dark', duration: 1000, showCloseButton: false}
   }
 
@@ -50,7 +49,6 @@ class MyRepos extends React.Component<MyReposProps> {
     const a = document.getElementById('hidden-export-link');
 
     if (a) {
-      this.setState({loaded: true});
       const masterKeysJSON = JSON.stringify(this.props.masterKeys.masterKeys, null, 2);
       a.setAttribute('href', URL.createObjectURL(new File([masterKeysJSON], 'masterkeys.json', { type: 'application/json' })));
       a!.click();
@@ -61,7 +59,7 @@ class MyRepos extends React.Component<MyReposProps> {
     return (
       <>
         <div className='repos'>
-          {this.props.masterKeys.masterKeys &&
+          {this.props.masterKeys.masterKeys.length > 0 &&
             <>
               <IonGrid>
                 {[...this.props.masterKeys.masterKeys].reverse().map((entry: MasterKeyEntry, index: number) => (
@@ -73,7 +71,7 @@ class MyRepos extends React.Component<MyReposProps> {
               </IonGrid>
             </>
           }
-          {!this.props.masterKeys.masterKeys && this.state.loaded &&
+          {this.props.masterKeys.masterKeys.length === 0 &&
             <div className='no-repos'>
               <p>Create a new repo to get started</p>
               <p><IonButton href='/new-repo' color='success'>+ New Repository</IonButton></p>
