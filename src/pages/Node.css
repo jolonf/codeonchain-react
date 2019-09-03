@@ -201,6 +201,10 @@ div#file-data {
   padding-bottom: 50px;
 }
 
+.video-data {
+  max-width: var(--width);
+}
+
 pre#text {
   overflow-x: auto;
   padding-left: 20px;

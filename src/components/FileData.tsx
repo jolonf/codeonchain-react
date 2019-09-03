@@ -20,7 +20,7 @@ const FileData = withRouter<FileDataProps>(({metanetNode, data}) => {
   if (data) {
     if (metanetNode.mimeType.startsWith('video') || metanetNode.mimeType.startsWith('audio')) {
       video = <div className='video-container'>
-        <video controls src={data} />
+        <video className='video-data' controls src={data} />
       </div>
     } else if (metanetNode.mimeType === 'image/svg+xml') {
       svg = (

@@ -174,6 +174,8 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({history, match, parent, onC
         setMessage(`Waiting for transaction to appear...`);
         await Metanet.waitForTransactionToAppearOnPlanaria(response.txid);
         setMessage(`Transaction sent`);
+        newLinkModal!.setTxId('');
+        newLinkModal!.setName('');
         onFilesAdded();
       } catch (error) {
         console.log('Error sending transaction', error); 

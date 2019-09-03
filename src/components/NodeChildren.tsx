@@ -47,7 +47,7 @@ const NodeChildren = withRouter<NodeChildrenProps>(({metanetNode, children, hist
     child.parent = metanetNode;
     return (
       <IonRow key={index} className='children-row'>
-        <IonCol size='3' className='col-name'>
+        <IonCol size='5' className='col-name'>
           <IonIcon icon={icon} color={child.isLink() ? 'primary': 'medium'}/> <Link className={`child-link ${child.isLink() && 'italic'}`} to={{pathname: '/tx/' + child.nodeTxId, state: {node: child}}}>{child.name}</Link> 
           {child.isLink() && <IonIcon icon={link.ios}/>}
         </IonCol>
