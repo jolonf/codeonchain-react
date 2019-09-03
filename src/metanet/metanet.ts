@@ -2,7 +2,6 @@ import BitIndexSDK from 'bitindex-sdk';
 import bsv from 'bsv';
 import { readAsArrayBuffer } from 'promise-file-reader';
 import { Buffer } from 'buffer';
-//import { inflate } from 'pako';
 
 import { MetanetNode } from "./metanet-node";
 import { BProtocol } from '../protocols/b.protocol';
@@ -478,6 +477,7 @@ export class Metanet {
     const attributions = metanetNode.attributions.map(a => ['|', ...AttributionProtocol.toASM(a)]).flat(1);
 
     const opReturn = ['OP_FALSE', 'OP_RETURN', ...this.arrayToHexStrings([...opReturnPayload, ...attributions])];
+    //console.log('ASM', opReturn.join(' '));
     const script = bsv.Script.fromASM(opReturn.join(' '))
     if (script.toBuffer().length > 100000) {
       throw new Error(`Maximum OP_RETURN size is 100000 bytes. Script is ${script.toBuffer().length} bytes.`)
@@ -558,7 +558,7 @@ export class Metanet {
   static arrayToHexStrings(array: any[]): string[] {
     return array.map(e => { 
       if (e instanceof Buffer) {
-        return e.toString('hex');
+        return e.length === 0 ? "OP_FALSE" : e.toString('hex');
       } else if (typeof e === 'number') {
         return e.toString(16).padStart(2, '0');
       } else {
@@ -638,7 +638,7 @@ export class Metanet {
     while (await this.memPoolChainLength(fundingTxId) >= 25) {
       const message = `Waiting for unconfirmed parents (Bitcoin has a maximum of 25 unconfirmed parents), this could take 10 minutes or longer... 
 Do not refresh or close the window as the files have not been uploaded yet.
-This has occurred either because more than 25 files are being uploaded, or previous Money Button transactions have yet to be confirmed.
+This has occurred either because more than 25 transactions are being sent, or previous Money Button transactions have yet to be confirmed.
 The Money Button transaction is: ${fundingTxId}`;
       console.log(message);
       statusCallback(message);

@@ -367,9 +367,11 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     try {
       this.setState({progressBarIndeterminate: true});
       await Metanet.waitForUnconfirmedParents(fundingTxId, (message: string) => this.onWaitForUnconfirmedParentsCallback(message));
+      this.setState({progressBarIndeterminate: false});
       const txIds = await Metanet.sendFileTrees(masterKey, fundingTxId, this.props.parent, this.props.context.fileTrees, (name: string) => this.onSendFilesCallback(name));
       console.log('Files added, txIds: ', txIds); 
       this.setState({message: `Waiting for transaction to appear...`});
+      this.setState({progressBarIndeterminate: true});
       await Metanet.waitForTransactionToAppearOnPlanaria(txIds[0]);
       this.setState({progressBarIndeterminate: false});
       this.setState({message: `Files Added`});

@@ -35,8 +35,6 @@ class NewFolderModal extends React.Component<NewFolderProps> {
     moneyButtonProps: {} as any,
 
     message: ''
-
-    //attributions: []
   }
 
   metanetNode = null as MetanetNode | null;
