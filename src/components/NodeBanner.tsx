@@ -5,15 +5,13 @@ import { RouteComponentProps, withRouter } from "react-router";
 import { Link } from "react-router-dom";
 
 import { MetanetNode } from '../metanet/metanet-node';
-import { Repo } from '../metanet/repo';
 import { IonIcon } from '@ionic/react';
 import { link } from 'ionicons/icons';
 
 interface NodeBannerProps extends RouteComponentProps {
   metanetNode: MetanetNode;
-  repo: Repo | null;
 }
-const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
+const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, match}) => {
 
   let backButton = null;
   if (metanetNode.parentTxId && metanetNode.parentTxId !== 'NULL') {
@@ -34,20 +32,22 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
   }
 
   let version = null;
+  let website = null;
   let github = null;
   let sponsor = null;
-  if (repo) {
-    if (repo.version) {
-      version = <img className='version-badge' alt={repo.version} src={`https://img.shields.io/badge/-${repo.version}-lightgrey`}/>;
+  if (metanetNode.repo) {
+    if (metanetNode.repo.version && metanetNode.repo.version.trim().length > 0) {
+      version = <img className='version-badge' alt={metanetNode.repo.version} src={`https://img.shields.io/badge/-${metanetNode.repo.version}-lightgrey`}/>;
     }
-    if (repo.github) {
-      github = <a href={repo.github}><img className='version-badge' alt='github' src={`https://img.shields.io/badge/-github-yellow`}/></a>;
+    if (metanetNode.repo.website && metanetNode.repo.website.startsWith('http')) {
+      website = <a href={metanetNode.repo.website} target='_blank' rel="noopener noreferrer"><img className='version-badge' alt='github' src={`https://img.shields.io/badge/-website-yellow`}/></a>;
     }
-    if (metanetNode.isRoot() && repo.sponsor && repo.sponsor.to) {
-      console.log(repo.sponsor);
-      sponsor = <MoneyButton {...repo.sponsor} editable={true} label='Tip' successMessage='Thanks!' />;
+    if (metanetNode.repo.github && metanetNode.repo.github.startsWith('http')) {
+      github = <a href={metanetNode.repo.github} target='_blank' rel="noopener noreferrer"><img className='version-badge' alt='github' src={`https://img.shields.io/badge/-github-blue`}/></a>;
     }
-  } else if (metanetNode.attributions.length > 0) {
+  } 
+  
+  if (metanetNode.attributions.length > 0) {
     const outputs = metanetNode.attributions.map(attribution => { 
       const output = {
         amount: attribution.defaultAmount,
@@ -72,7 +72,7 @@ const NodeBanner = withRouter<NodeBannerProps>(({metanetNode, repo, match}) => {
       <div id='node-banner-display'>
         <div id='node-title'>
           <div id='node-name'>
-            <span id='node-name'> {backButton} {nodeName} {metanetNode.isDirectory && metanetNode.isDirectory() && (metanetNode.parentTxId !== 'NULL') && ' /'} {metanetNode.link && <IonIcon icon={link.ios} />} {version}{github}</span>
+            <span id='node-name'> {backButton} {nodeName} {metanetNode.isDirectory && metanetNode.isDirectory() && (metanetNode.parentTxId !== 'NULL') && ' /'} {metanetNode.link && <IonIcon icon={link.ios} />} {version}{github}{website}</span>
           </div>
           <div id='node-txid'>
               <Link id='node-publickey' to={`${match.url}/details`}>{metanetNode.nodeAddress}</Link><br />

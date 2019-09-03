@@ -60,6 +60,7 @@ export class FileTree {
             //console.log(`Creating FileTree for ${pc}`);
             f = new FileTree(pc, i === pathComponents.length - 1 ? file : null);
             children.push(f);
+            children.sort((a, b) => a.name < b.name ? -1 : 1);
           }
           children = f.children;
         });
@@ -82,6 +83,8 @@ export class FileTree {
       fileTrees.push(await this.entryToFileTree(entry));
     }
 
+    fileTrees.sort((a, b) => a.name < b.name ? -1 : 1);
+
     return fileTrees;
   }
 
@@ -98,8 +101,9 @@ export class FileTree {
 
       const entries = await this.readEntries(directoryReader);
       for (const childEntry of entries) {
-          fileTree.children.push(await this.entryToFileTree(childEntry));
+        fileTree.children.push(await this.entryToFileTree(childEntry));
       }
+      fileTree.sort();
     }
 
     return fileTree;
@@ -115,6 +119,13 @@ export class FileTree {
     return new Promise<File>(resolve => {
       entry.file((file: File) => resolve(file))
     });
+  }
+
+  /**
+   * Files aren't sorted automatically.
+   */
+  sort() {
+    this.children.sort((a, b) => a.name < b.name ? -1 : 1);
   }
 
   /**

@@ -63,11 +63,22 @@ class EditAttribution extends React.Component<EditAttributionProps> {
           Currency: <select value={this.state.currency} onChange={(e) => this.onCurrencyChanged(e)}>
             <option value='BSV'>BSV</option>
             <option value='USD'>USD</option>
+            <option disabled>──────────</option>
             <option value='AUD'>AUD</option>
             <option value='CAD'>CAD</option>
+            <option value='CHF'>CHF</option>
+            <option value='CYN'>CYN</option>
             <option value='EUR'>EUR</option>
             <option value='GBP'>GBP</option>
-            <option value='GBP'>NZD</option>
+            <option value='HKD'>HKD</option>
+            <option value='JPY'>JPY</option>
+            <option value='KRW'>KRW</option>
+            <option value='NZD'>NZD</option>
+            <option value='RUB'>RUB</option>
+            <option value='SEK'>SEK</option>
+            <option value='SGD'>SGD</option>
+            <option value='THB'>THB</option>
+            <option value='ZAR'>ZAR</option>
           </select>
         </div>
         <div>

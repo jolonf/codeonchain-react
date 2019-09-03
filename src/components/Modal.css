@@ -52,6 +52,15 @@ legend {
   font-weight: bold;
 }
 
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 100%;
+  }
+  .label {
+    text-align: left;
+  }
+}
+
 label {
   vertical-align: middle;
 }

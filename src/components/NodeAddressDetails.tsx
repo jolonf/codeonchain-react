@@ -40,7 +40,10 @@ class NodeAddressDetails extends React.Component<NodeAddressDetailsProps> {
             <IonButton disabled={this.state.sats === 0 || !this.state.sendAddress || this.state.sending || !this.state.masterKeyXprv} onClick={() => {this.onSendButton()}}>Send</IonButton>
           </p>
           <p>
-            <input type='text' placeholder='Master Key xprv' value={this.state.masterKeyXprv} onChange={(e) => this.setState({masterKeyXprv: e.target.value})}/> 
+            Master Key:
+          </p>
+          <p>
+            <input type='text' className='monospace' placeholder='Master Key xprv' value={this.state.masterKeyXprv} onChange={(e) => this.setState({masterKeyXprv: e.target.value})}/> 
           </p>
         </div>
         <div>

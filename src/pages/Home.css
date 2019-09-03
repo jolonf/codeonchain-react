@@ -23,6 +23,11 @@ ion-col {
   white-space: nowrap;
 }
 
+.sponsor-col {
+  height: 52px;
+  padding: 0px;
+}
+
 #repos-tabs {
   display: flex;
   width: var(--width);
@@ -49,16 +54,7 @@ ion-col {
   background-color: #eaecef;
   color: #24292e;
 }
-/*
-.tab a {
-  text-decoration: none;
-  color: #586069;
-}
 
-.tab-selected a {
-  color: #24292e;
-}
-*/
 .tab:hover {
   color: #24292e;
 }

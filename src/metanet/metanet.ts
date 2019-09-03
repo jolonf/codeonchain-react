@@ -22,11 +22,10 @@ export const METANET_FLAG     = 'meta';
 export const MIN_OUTPUT_VALUE = 546;
 export const MAX_TX_SIZE      = 90000; // Any files larger will use Bcat protocol
 
-//const METANARIA_ENDPOINT = 'https://metanaria.planaria.network/q/';
-//const GENESIS_ENDPOINT = 'https://genesis.bitdb.network/q/1FnauZ9aUH2Bex6JzdcV4eNX7oLSSEbxtN/';
 const BOB_ENDPOINT = 'https://bob.planaria.network/q/1GgmC7Cg782YtQ6R9QkM58voyWeQJmJJzG/';
 
 const PLANARIA_ENDPOINT = BOB_ENDPOINT;
+const PLANARIA_API_KEY = '1ErPC3RDtAJdAgXZ8dw89C8He44BnHujhp';
 
 export interface Cell {
   s: string,
@@ -76,6 +75,59 @@ export class Metanet {
     return metanetNodes[0];
   }
 
+  static async getMetanetNodesByTxIds(txIds: string[]): Promise<MetanetNode[]> {
+    const metanetNodes = await this.getMetanetNodes({
+      "v": 3,
+      "q": {
+          "find": {
+              "tx.h": {
+                "$in": txIds
+              }
+          },
+          "project": {
+              "tx.h": 1,
+              "out.tape.cell": 1,
+          }
+      }
+    });
+
+    return metanetNodes;
+  }
+
+  static async getRecentRepos(): Promise<MetanetNode[]> {
+    const metanetNodes = await this.getMetanetNodes({
+      "v": 3,
+      "q": {
+        "find": {
+          "$and": [
+            {
+              "out.tape.cell": {
+                "$elemMatch": {
+                    "i": 0,
+                    "s": RepoProtocol.address
+                }
+              }
+            },
+            {
+              "out.tape.cell": {
+                "$elemMatch": {
+                    "i": 6,
+                    "s": "0"
+                }
+              }
+            }
+          ]
+        },
+        "project": {
+            "tx.h": 1,
+            "out.tape.cell": 1,
+        }
+      }
+    });
+
+    return metanetNodes;
+  }
+
   /**
    * 
    * @param parentAddress 
@@ -85,7 +137,7 @@ export class Metanet {
   static async getChildren(parentAddress: string, txId: string, complete = false): Promise<MetanetNode[]> {
     const project = complete ? {"out.tape.cell": 1, "tx.h": 1} : {"out.tape.cell.s": 1, "tx.h": 1};
 
-    return this.getMetanetNodes({
+    const nodes = await this.getMetanetNodes({
       "v": 3,
       "q": {
         "find": {
@@ -112,11 +164,13 @@ export class Metanet {
         "project": project
       }
     });
+
+    return nodes.sort((a, b) => a.name < b.name ? -1 : 1);
   }
 
   static async getMetanetNodes(query: any): Promise<MetanetNode[]> {
     const url = PLANARIA_ENDPOINT + btoa(JSON.stringify(query));
-    const response = await fetch(url, { headers: { key: '1DzNX2LzKrmoyYVyqMG46LLknzSd7TUYYP' } });
+    const response = await fetch(url, { headers: { key: PLANARIA_API_KEY } });
     const json = await response.json();
     //console.log(json);
     const children = [] as MetanetNode[];
@@ -129,12 +183,14 @@ export class Metanet {
 
       for (const output of item.out) {
         for (const cell of output.tape) {
-          const protocolAddress = cell.cell[0].s;
-          const protocol = this.protocols.find(p => p.address === protocolAddress);
-          if (protocol) {
-            protocol.read(metanetNode, cell.cell as Cell);
-            if (this.fileProtocols.includes(protocolAddress)) {
-              metanetNode.protocol = protocolAddress;
+          if (cell.cell[0]) {
+            const protocolAddress = cell.cell[0].s;
+            const protocol = this.protocols.find(p => p.address === protocolAddress);
+            if (protocol) {
+              protocol.read(metanetNode, cell.cell as Cell);
+              if (this.fileProtocols.includes(protocolAddress)) {
+                metanetNode.protocol = protocolAddress;
+              }
             }
           }
         }
@@ -144,8 +200,6 @@ export class Metanet {
         children.push(metanetNode);
       }
     }
-
-    children.sort((a, b) => a.name < b.name ? -1 : 1);
 
     return children;
   }
@@ -169,7 +223,7 @@ export class Metanet {
       }
     };
     const url = PLANARIA_ENDPOINT + btoa(JSON.stringify(query));
-    const response = await fetch(url, { headers: { key: '1DzNX2LzKrmoyYVyqMG46LLknzSd7TUYYP' } });
+    const response = await fetch(url, { headers: { key: PLANARIA_API_KEY } });
     const json = await response.json();
     //console.log(json);
     const items = json.u.reverse().concat(json.c);
@@ -180,7 +234,6 @@ export class Metanet {
       for (const output of item.out) {
         for (const cell of output.tape) {
           const protocolAddress = cell.cell[0].s;
-          console.log('protocolAddress: ' + protocolAddress);
           const protocol = this.protocols.find(p => p.address === protocolAddress);
           if (protocol) {
             protocols.push(protocol.fromCell(cell.cell as Cell))
@@ -509,6 +562,10 @@ export class Metanet {
       } else if (typeof e === 'number') {
         return e.toString(16).padStart(2, '0');
       } else {
+        // Empty strings won't produce a field
+        if (e.length === 0) {
+          e = ' ';
+        }
         return Buffer.from(e).toString('hex');
       }
     });

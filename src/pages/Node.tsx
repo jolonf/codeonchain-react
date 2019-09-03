@@ -11,7 +11,6 @@ import { Metanet } from '../metanet/metanet';
 import { MetanetNode } from '../metanet/metanet-node';
 import { BProtocol } from '../protocols/b.protocol';
 import { BcatProtocol } from '../protocols/bcat.protocol';
-import { Repo } from '../metanet/repo';
 import Banner from '../components/Banner';
 import NodeBanner from '../components/NodeBanner';
 import AddFilesModal from '../components/AddFilesModal';
@@ -36,8 +35,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     metanetNode: new MetanetNode(),
     children: null as MetanetNode[] | null,
     readme: '',
-    fileData: null as (string | null), // File text or ObjectURL string
-    repo: null as (Repo | null)
+    fileData: null as (string | null) // File text or ObjectURL string
   };
 
   state = this.initialState;
@@ -50,7 +48,7 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
         <IonContent >
           <Banner />
           <div id='metanet-node'>
-            <NodeBanner metanetNode={metanetNode} repo={this.state.repo} />
+            <NodeBanner metanetNode={metanetNode} />
             {metanetNode &&
             <>
               {metanetNode.attributions.length > 0 &&
@@ -162,13 +160,9 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     this.setState({children: await metanetNode.loadChildren()});
 
     if (metanetNode.children.length > 0) {
-      const readmeNode = metanetNode.children.find(c => c.name.toLowerCase() === 'readme.md')
+      const readmeNode = metanetNode.children.find(c => c.name && c.name.toLowerCase() === 'readme.md')
       if (readmeNode) {
         this.loadReadme(readmeNode);
-      }
-      const bsvpushData = metanetNode.children.find(c => c.name.toLowerCase() === 'bsvpush.json')
-      if (bsvpushData) {
-        this.loadBsvpushData(metanetNode, bsvpushData);
       }
     }
   }
@@ -180,15 +174,6 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
     const converter = new showdown.Converter();
     const readme = converter.makeHtml(md);
     this.setState({readme: readme});
-  }
-
-  async loadBsvpushData(metanetNode: MetanetNode, bsvpushNode: MetanetNode) {
-    const data = (await Metanet.getMetanetNode(bsvpushNode.nodeTxId)).dataString;
-    const json = JSON.parse(data);
-
-    const repo = new Repo(metanetNode.nodeAddress, metanetNode.nodeTxId, json);
-
-    this.setState({repo: repo});
   }
 
   async loadFile(metanetNode: MetanetNode) {

@@ -54,6 +54,12 @@ div#banner {
   font-size: 1.2em;
 }
 
+#banner-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
 #new-repo-btn-container {
   margin-left: auto;
   margin-right: 5px;

@@ -22,7 +22,7 @@ export class MasterKeyStorage {
     }
   }
 
-  static storeMasterKey(masterKey: any, txId: string, repoName: string) {
+  static storeMasterKey(xprv: string, txId: string, repoName: string) {
     // Retrieve
     if (window.localStorage) {
       let masterKeysJson = window.localStorage.masterKeys;
@@ -33,12 +33,16 @@ export class MasterKeyStorage {
 
       const masterKeys = JSON.parse(masterKeysJson);
 
-      masterKeys.push({
-        masterKey: masterKey.xprivkey,
-        publicAddress: masterKey.deriveChild('m/0').publicKey.toAddress().toString(),
-        txId: txId,
-        repoName: repoName
-      });
+      let storedMasterKey = masterKeys.find((m: any) => m.masterKey === xprv);
+      if (!storedMasterKey) {
+        storedMasterKey = {} as any;
+        masterKeys.push(storedMasterKey);
+      }
+
+      storedMasterKey.masterKey = xprv;
+      storedMasterKey.publicAddress = bsv.HDPrivateKey(xprv).deriveChild('m/0').publicKey.toAddress().toString();
+      storedMasterKey.txId = txId;
+      storedMasterKey.repoName = repoName;
 
       window.localStorage.masterKeys = JSON.stringify(masterKeys, null, 2);
 

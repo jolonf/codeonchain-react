@@ -24,6 +24,8 @@ import { FileTree } from './metanet/file-tree';
 import { Attribution } from './storage/attribution';
 
 export interface NewRepoModalContext {
+  xprv: string;
+  setXprv: (xprv: string) => void;
   storeMasterKey: boolean;
   setStoreMasterKey: (storeMasterKey: boolean) => void;
   name: string;
@@ -74,6 +76,8 @@ class App extends React.Component<any, AppContextInterface> {
 
   readonly state: AppContextInterface = {
     newRepoModal: {
+      xprv: '',
+      setXprv: (xprv: string) => this.setState(state => ({newRepoModal: {...state.newRepoModal, xprv}})),
       storeMasterKey: true,
       setStoreMasterKey: (storeMasterKey: boolean) => this.setState(state => ({newRepoModal: {...state.newRepoModal, storeMasterKey}})),
       name: '',

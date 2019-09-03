@@ -31,6 +31,9 @@ export class BProtocol {
   }
 
   static toASM(data: Buffer | string, fileName: string, mimeType = ' ', encoding = ' ') {
+    if (mimeType.length === 0) {
+      mimeType = ' ';
+    }
     return [
       this.address, // B://
       data, 
@@ -45,9 +48,9 @@ export class BProtocol {
     metanetNode.dataBase64  = cell[1].b || cell[1].lb;
     metanetNode.mimeType    = cell[2].s;
     metanetNode.encoding    = cell[3].s;
-    metanetNode.name        = cell[4].s;
+    metanetNode.name        = cell[4] && cell[4].s;
 
-    if (metanetNode.mimeType && metanetNode.mimeType.trim() === '') {
+    if (metanetNode.name && metanetNode.mimeType && metanetNode.mimeType.trim() === '') {
       metanetNode.mimeType = Metanet.guessMimeType(metanetNode.name);
     }
   }

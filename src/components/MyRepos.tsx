@@ -59,11 +59,11 @@ const MyRepos = () => {
       <div className='repos'>
         {masterKeys &&
           <>
-            <IonGrid fixed>
+            <IonGrid>
               {masterKeys.map((entry: MasterKeyEntry, index: number) => (
                 <IonRow key={index} className="ion-align-items-center">
-                  <IonCol size='2'><Link to={'/tx/' + entry.txId}>{entry.repoName}</Link></IonCol>
-                  <IonCol size='10' className='monospace grey'>{entry.txId}</IonCol>
+                  <IonCol sizeMd='3' sizeSm='4' sizeXs='6'><Link to={'/tx/' + entry.txId}>{entry.repoName}</Link></IonCol>
+                  <IonCol sizeMd='9' sizeSm='8' sizeXs='6' className='monospace grey'>{entry.txId}</IonCol>
                 </IonRow>
               ))}
             </IonGrid>

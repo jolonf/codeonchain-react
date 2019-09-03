@@ -31,14 +31,16 @@ const Banner = withRouter(({history, match, location}) => {
           <Logo />
           <span id='upload'>Upload repositories to metanet</span>
         </div>
-        <div id="new-repo-btn-container">
-          <IonButton id="new-repo-btn" color="success" href={`${baseURL}/new-repo`}>+ New Repository</IonButton>
-        </div>
-        <div id="sign-in-container">
-          <IonButton id="sign-in-btn" color='medium' fill='outline' href={`${baseURL}/sign-in`}>Sign In...</IonButton>
-        </div>
-        <div id='search-container'>
-          <IonSearchbar onKeyUp={search} placeholder="Transaction ID" mode="ios"/>
+        <div id='banner-right'>
+          <div id="new-repo-btn-container">
+            <IonButton id="new-repo-btn" color="success" href={`${baseURL}/new-repo`}>+ New Repository</IonButton>
+          </div>
+          <div id="sign-in-container">
+            <IonButton id="sign-in-btn" color='medium' fill='outline' href={`${baseURL}/sign-in`}>Sign In...</IonButton>
+          </div>
+          <div id='search-container'>
+            <IonSearchbar onKeyUp={search} placeholder="Transaction ID" mode="ios"/>
+          </div>
         </div>
       </div>
       <TransitionGroup>

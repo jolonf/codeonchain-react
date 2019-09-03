@@ -33,19 +33,17 @@ class NewRepoModal extends React.Component<NewRepoProps> {
 
   state = {
     message: '',
-    masterKey: bsv.HDPrivateKey(),
     moneyButtonProps: {} as any
   };
 
   componentDidMount() {
-    const masterKey = bsv.HDPrivateKey();
-    //console.log('masterKey', masterKey);
-
-    this.setState({masterKey: masterKey});
+    if (!this.props.context.xprv) {
+      this.props.context.setXprv(bsv.HDPrivateKey().xprivkey);
+    }
   }
 
   render() {
-    const createRepoButtonDisabled = !(this.state.masterKey && this.props.context.name);
+    const createRepoButtonDisabled = !(this.props.context.xprv && this.props.context.name);
     return (
       <>
       <div id="overlay" onClick={() => this.props.onClose()}>
@@ -55,8 +53,9 @@ class NewRepoModal extends React.Component<NewRepoProps> {
           <fieldset className='form-group'>
             <legend>Required</legend>
             <div className='form-grid'>
+              
               <div className='label'>Master key: </div>
-              <div><input type='text' id='repo-master-key' size={64} readOnly value={this.state.masterKey.xprivkey} /></div>
+              <div><input type='text' id='repo-master-key' size={64} onChange={e => this.onMasterKeyChanged(e)} defaultValue={this.props.context.xprv} /></div>
               <div/>
               <div><IonCheckbox checked={this.props.context.storeMasterKey} id='store-master-key' onIonChange={(e) => this.onStoreMasterKeyChanged(e)}/><label htmlFor='store-master-key'> Store master key in local storage.</label><br/>
               <span className='input-note'>You must keep a copy of the master key to be able to make future changes to the repo.</span></div>
@@ -90,7 +89,7 @@ class NewRepoModal extends React.Component<NewRepoProps> {
               <IonButton href={`${this.props.match.url}/attribution`} className='attribution-button' color='dark' fill='outline' disabled={false}>Attribution...</IonButton>
             </div>
             <div>
-              <IonButton onClick={() => this.props.onClose()}>Close</IonButton>
+              <IonButton onClick={() => this.onClose()}>Close</IonButton>
               <IonButton onClick={() => this.generateOutputs()} color='success' disabled={createRepoButtonDisabled}>Create Repo</IonButton>
             </div>
           </div> 
@@ -138,6 +137,11 @@ class NewRepoModal extends React.Component<NewRepoProps> {
     );
   }
 
+  onMasterKeyChanged(e: React.ChangeEvent<HTMLInputElement>) {
+    this.props.context.setXprv(e.target.value);
+    this.setState({moneyButtonProps: {}});
+  }
+
   onStoreMasterKeyChanged(e: any) {
     this.setState({storeMasterKey: e.target.value === 'on'});
     if (e.target.value === 'on') {
@@ -177,13 +181,19 @@ class NewRepoModal extends React.Component<NewRepoProps> {
     this.props.history.push(this.props.match.url);
   }
 
+  onClose() {
+    this.props.context.setXprv('');
+    this.props.onClose();
+  }
+
   async generateOutputs() {
     const moneyButtonProps = this.state.moneyButtonProps;
 
     if (this.props.context.name) {
       // Transaction will create the root node as well as fund the root
       // so that the .bsvignore and bsvpush.json files can be created
-      const rootNode = new MetanetNode(this.state.masterKey, 'm/0', this.props.context.name);
+      const masterKey = bsv.HDPrivateKey(this.props.context.xprv);
+      const rootNode = new MetanetNode(masterKey, 'm/0', this.props.context.name);
 
       rootNode.attributions = this.props.attributions.attributions;
 
@@ -224,12 +234,13 @@ class NewRepoModal extends React.Component<NewRepoProps> {
     console.log('funding/parent txid: ' + fundingTxId);
 
     if (this.props.context.storeMasterKey) {
-      MasterKeyStorage.storeMasterKey(this.state.masterKey, fundingTxId, this.props.context.name);
+      MasterKeyStorage.storeMasterKey(this.props.context.xprv, fundingTxId, this.props.context.name);
     }
 
     console.log(`Repo created, view here https://codeonchain.network/tx/${fundingTxId}`);   
     this.setState({message: `Repo created, loading...`});   
     this.setState({moneyButtonProps: {}});
+    this.props.context.setXprv('');
     this.props.history.push(`/tx/${fundingTxId}`);
   }
 

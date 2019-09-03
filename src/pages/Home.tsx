@@ -7,42 +7,19 @@ import { NavTab } from 'react-router-tabs';
 import MoneyButton from '@moneybutton/react-money-button';
 
 import MyRepos from '../components/MyRepos';
-import { Repos } from '../metanet/repos';
-import { Repo } from '../metanet/repo';
 import Banner from '../components/Banner';
 import { Switch, Route, RouteComponentProps } from 'react-router';
+import { Link } from 'react-router-dom';
+import { Metanet } from '../metanet/metanet';
+import { MetanetNode } from '../metanet/metanet-node';
 
 class Home extends React.Component<RouteComponentProps> {
-  featuredTransactions = [
-    '4bec3dc8e12fce17315084e01affd0b607fa11a857ecf7eed09caee06d74481d', // bitcoin-sv
-    '21a58fae8d01df0b33f34e82e1ef30e49ad474e91890e027e926f88af15b9939', // bsvpush
-    'a3663b6d8ef3d9b49e29152b60c5cadd9e2e673d90c12e029918028582fa3a17', // connect4
-    'a508bb614add6a66ba14b05794c9ae98afb34675a26d591dced88221c5ca4d03'  // bcat-client-stream
-  ];
 
   state = {
-    tab: 'featured',
-    repos: [] as Repo[]
+    tab: 'featured'
   };
 
   render() {
-
-    const rows = this.state.repos.map((repo, index) => {
-      let sponsor = null;
-      if (repo.sponsor && repo.sponsor.to) {
-        sponsor = <MoneyButton {...repo.sponsor} />;
-      }
-  
-      return (
-        <IonRow key={index} className="ion-align-items-center">
-          <IonCol size='2'><a href={'/tx/' + repo.nodeTxId}>{repo.name}</a></IonCol>
-          <IonCol size='6'>{repo.description}</IonCol>
-          <IonCol size-sm='1' size-xs="0">{repo.version}</IonCol>
-          <IonCol size='2'>{sponsor}</IonCol>
-        </IonRow>
-      );
-    });
-
     return (
       <>
         <IonContent>
@@ -54,21 +31,12 @@ class Home extends React.Component<RouteComponentProps> {
             <Route path='/recent-repos' component={RecentRepos}/>
             <Route path='/' component={MyRepos}/>
           </Switch>
-          <IonGrid fixed>
-            {rows}
-          </IonGrid>
           <p id='footer-message'>
             Metanet
           </p>
         </IonContent>
       </>
     );
-  }
-
-  async componentDidMount() {
-    const txs = this.state.tab === 'featured' ? this.featuredTransactions : null;
-    const repos = await Repos.getRepos(txs);
-    this.setState({repos: repos});
   }
 };
 
@@ -84,16 +52,87 @@ const ReposTabs = () => {
   );
 };
 
-const FeaturedRepos = () => {
-  return (
-    <div>Featured Repos</div>
-  );
-};
+class FeaturedRepos extends React.Component {
+  readonly state = {
+    repos: [] as MetanetNode[]
+  };
 
-const RecentRepos = () => {
+  render () {
+    return (
+      <div className='repos'>
+        <ReposView repos={this.state.repos}/>
+      </div>
+    );
+  }
+
+  async componentDidMount() {
+    const featuredTransactions = [
+      '6ebb4e4966f86f523bbef8a7268df640b5a9fcc11f2bd96c90c2428575703865' // codeonchain-react
+    ];
+    this.setState({repos: await Metanet.getMetanetNodesByTxIds(featuredTransactions)});
+  }
+}
+
+class RecentRepos extends React.Component {
+  readonly state = {
+    repos: [] as MetanetNode[]
+  };
+
+  async componentDidMount() {
+    const repos = await Metanet.getRecentRepos();
+    //console.log('repos', repos);
+    this.setState({repos: repos});
+  }
+
+  render () {
+    return (
+      <div className='repos'>
+        <ReposView repos={this.state.repos}/>
+      </div>
+    )
+  }
+}
+
+interface ReposViewProps {
+  repos: MetanetNode[];
+}
+const ReposView: React.FunctionComponent<ReposViewProps> = ({repos}) => {
   return (
-    <div>Recent Repos</div>
+    <>
+      <IonGrid>
+        {repos.map((repo: MetanetNode, index: number) => {
+          let sponsor = null;
+          if (repo.attributions.length > 0) {
+            const outputs = repo.attributions.map(attribution => { 
+              const output = {
+                amount: attribution.defaultAmount,
+                currency: attribution.currency
+              } as any;
+        
+              // Determine whether to use the address or paymail field
+              if (attribution.sponsor.includes('@')) {
+                output.paymail = attribution.sponsor;
+              } else {
+                output.address = attribution.sponsor;
+              }
+              return output;
+            });
+            sponsor = <MoneyButton outputs={outputs} editable={false} label='Tip' successMessage='Thanks!' />;
+          }
+
+          return (
+              <IonRow key={index} className="ion-align-items-center">
+                <IonCol sizeMd='3' sizeSm='4' sizeXs='5'><Link to={'/tx/' + repo.nodeTxId}>{repo.name}</Link></IonCol>
+                <IonCol sizeMd='2' sizeSm='3' sizeXs='4' className='sponsor-col'>{sponsor}</IonCol>
+                <IonCol sizeMd='7' sizeSm='5' sizeXs='3' className='grey'>{repo.repo!.description}</IonCol>
+              </IonRow>
+            )
+          }
+        )}
+      </IonGrid>
+
+    </>
   );
-};
+}
 
 export default Home;
