@@ -73,11 +73,13 @@ class FeaturedRepos extends React.Component {
   }
 
   async componentDidMount() {
-    const featuredTransactions = [
-      '6ebb4e4966f86f523bbef8a7268df640b5a9fcc11f2bd96c90c2428575703865', // codeonchain-react
-      'a06d7f19675384d8de54e73e64c87644f0f29350eb4f5fbea230b5803981ac99', // Onchain Videos
-    ];
-    this.setState({repos: await Metanet.getMetanetNodesByTxIds(featuredTransactions)});
+    const response = await fetch('/featured-repos.json');
+    const json = await response.json();
+    const txIds = json.featuredRepos.map((r: any) => r.txId) as string[];
+    const metanetNodes = await Metanet.getMetanetNodesByTxIds(txIds);
+    // Preserve original order
+    const repos = txIds.map(txId => metanetNodes.find(m => m.nodeTxId === txId));
+    this.setState({repos: repos});
   }
 }
 

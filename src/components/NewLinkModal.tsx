@@ -59,16 +59,18 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({history, match, parent, onC
   }, []);
 
   const onTxIdChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const txId = e.target.value;
-    newLinkModal!.setTxId(txId);
+    let txId = e.target.value;
 
     if (txId) {
-      // Sanitise
-      if (txId.length !== 64) {
+      // Extract tx
+      const result = txId.match(/[0-9A-Fa-f]{64}/);
+      if (!(result && result[0])) {
         setTxIdMessage('Invalid transaction ID');
         return;
       }
-      getTxInfo(e.target.value);
+      txId = result[0];
+      newLinkModal!.setTxId(txId);
+      getTxInfo(txId);
     } else {
       setTxIdMessage('');
     }

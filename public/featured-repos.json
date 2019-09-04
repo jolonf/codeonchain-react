@@ -1,0 +1,20 @@
+{
+  "featuredRepos": [
+    {
+      "name": "Onchain Videos",
+      "txId": "a06d7f19675384d8de54e73e64c87644f0f29350eb4f5fbea230b5803981ac99"
+    },
+    {
+      "name": "codeonchain-react",
+      "txId": "6ebb4e4966f86f523bbef8a7268df640b5a9fcc11f2bd96c90c2428575703865"
+    },
+    {
+      "name": "bitstagram",
+      "txId": "49b9e89a94eca44c205af949da44b0afb7ccbc5e1398dd56e83acc523bd7a4c7"
+    },
+    {
+      "name": "Veribit",
+      "txId": "4590c5b5d8a40b4d7b44fdae6765c07557e1c0e99b3046d65c1fa67883a3b1e4"
+    }
+  ]
+}

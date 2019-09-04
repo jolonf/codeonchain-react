@@ -14,7 +14,7 @@ class EditAttribution extends React.Component<EditAttributionProps> {
 
   state = {
     attributionList: [] as Attribution[],
-    currency: 'BSV',
+    currency: 'USD',
     selectedAttributionIndex: -1,
     showDeleteAttributionAlert: false,
     saveLocalStorage: true

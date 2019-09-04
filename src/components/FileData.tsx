@@ -7,10 +7,30 @@ interface FileDataProps extends RouteComponentProps {
   metanetNode: MetanetNode;
   data: string | null;
 }
-const FileData = withRouter<FileDataProps>(({metanetNode, data}) => {
+const FileData = withRouter<FileDataProps>(({location, metanetNode, data}) => {
   if (!data) {
     return null;
   }
+
+  // Returns ?query params as an object where each property is a param name.
+  const getQueryParams = () => {
+    const parts = location.search.substring(1).split('&');
+    return parts.map(p => {
+      const tokens = p.split('=');
+      const param = {} as any;
+      param[tokens[0]] = tokens[1];
+      return param;
+    }).reduce((result, param) => ({...result, ...param}), {} as any);
+  };
+
+  const handleVideoMounted = (element: HTMLVideoElement) => {
+    if (element !== null) {
+      const params = getQueryParams();
+      if (params.t) {
+        element.currentTime = parseInt(params.t);
+      }
+    }
+  };
 
   let fileText = null;
   let img = null;
@@ -20,7 +40,7 @@ const FileData = withRouter<FileDataProps>(({metanetNode, data}) => {
   if (data) {
     if (metanetNode.mimeType.startsWith('video') || metanetNode.mimeType.startsWith('audio')) {
       video = <div className='video-container'>
-        <video className='video-data' controls src={data} />
+        <video className='video-data' controls src={data} ref={handleVideoMounted} />
       </div>
     } else if (metanetNode.mimeType === 'image/svg+xml') {
       svg = (
