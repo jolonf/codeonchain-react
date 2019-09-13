@@ -134,8 +134,6 @@ const NewLinkModal = withRouter<NewLinkModalProps>(({history, match, parent, onC
     setMessage('Estimating fees...');
 
     if (xprv) {
-      // Transaction will create the root node as well as fund the root
-      // so that the .bsvignore and bsvpush.json files can be created
       const masterKey = bsv.HDPrivateKey(xprv);
       const metanetNode = parent.childOrCreate(newLinkModal!.name, masterKey);
       metanetNode.attributions = attributions!.attributions;

@@ -527,7 +527,7 @@ export class Metanet {
   }
 
   static async bcatTx(masterKey: any, fundingTxId: string | null, metanetNode: MetanetNode, partTxIds: string[], data: Buffer | string, mimeType: string) {
-    const payload = BcatProtocol.toASM(partTxIds, metanetNode.name, mimeType, ' ');
+    const payload = BcatProtocol.toASM(partTxIds, metanetNode.name, ' ', mimeType, ' ');
     const digest = await this.sha512(data);
     const dip = DataIntegrityProtocol.toASM('SHA-512', digest, '01', '01');
     return this.createTx(masterKey, fundingTxId, metanetNode, [...payload, '|', ...dip]);

@@ -16,10 +16,6 @@ import { AppContext } from '../App';
 
 class Home extends React.Component<RouteComponentProps> {
 
-  state = {
-    tab: 'featured'
-  };
-
   render() {
     return (
       <>

@@ -24,12 +24,19 @@ const ProtocolView: React.FunctionComponent<ProtocolProps> = ({protocol}) => {
             if (key !== 'description' && key !== 'address') {
               let value = protocol[key];
               if (Array.isArray(value)) {
-              value = value.map((v, index) => <span key={index}>[{index}] {v}<br/></span>);
+                value = value.map((v, index) => <span key={index}>[{index}] {v}<br/></span>);
+              } else {
+                if (typeof value === 'object') {
+                  value = value.toString('hex');
+                } else {
+                  value = value.toString();
+                }
               }
+
               return (
                 <IonRow key={i} className='key-row'>
                   <IonCol size='3' className='label key'>{key}</IonCol>
-                  <IonCol className='protocol-value'>{value && (typeof value === 'object') ? value.toString('hex') : value.toString()}</IonCol>
+                  <IonCol className='protocol-value'>{value}</IonCol>
                 </IonRow>
               );
             }
