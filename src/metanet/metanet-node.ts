@@ -18,6 +18,7 @@ export class MetanetNode {
 
   dataString = '';
   dataBase64 = '';
+  bitFSPath = '';
 
   parent = null as MetanetNode | null;
   children = [] as MetanetNode[];

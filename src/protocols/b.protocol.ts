@@ -11,6 +11,7 @@ export class BProtocol {
 
   dataString  = '';
   dataBase64  = '';
+  bitFSPath   = '';
   mimeType    = '';
   encoding    = '';
   name        = '';
@@ -19,6 +20,7 @@ export class BProtocol {
     const b = new BProtocol();
     b.dataString  = cell[1].s || cell[1].ls || ''; // s and b will be missing if zero length
     b.dataBase64  = cell[1].b || cell[1].lb || '';
+    b.bitFSPath   = cell[1].f || '';
     b.mimeType    = cell[2].s;
     b.encoding    = cell[3].s;
     b.name        = cell[4].s || '';
@@ -45,7 +47,8 @@ export class BProtocol {
 
   static read(metanetNode: MetanetNode, cell: Cell[]) {
     metanetNode.dataString  = cell[1].s || cell[1].ls || '';
-    metanetNode.dataBase64  = cell[1].b || cell[1].lb;
+    //metanetNode.dataBase64  = cell[1].b || cell[1].lb;
+    metanetNode.bitFSPath   = cell[1].f || '';
     metanetNode.mimeType    = cell[2].s;
     metanetNode.encoding    = cell[3].s;
     metanetNode.name        = (cell[4] && cell[4].s) || '';
@@ -55,4 +58,5 @@ export class BProtocol {
     }
   }
 }
+
 export interface BProtocol extends Protocol {}

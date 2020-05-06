@@ -4,6 +4,7 @@ import { IonApp, IonPage, IonRouterOutlet } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import Home from './pages/Home';
 import NodePage from './pages/Node';
+import SearchResultsPage from './pages/SearchResults';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/core/css/core.css';
@@ -142,6 +143,7 @@ class App extends React.Component<any, AppContextInterface> {
             <IonPage>
               <IonRouterOutlet>
                 <Route path="/tx/:txId" component={NodePage} />
+                <Route path="/repo/:query" component={SearchResultsPage} />
                 <Route path="/" component={Home} />
               </IonRouterOutlet>
             </IonPage>

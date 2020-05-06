@@ -168,7 +168,10 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
   }
 
   async loadReadme(readmeNode: MetanetNode) {
-    const md = (await Metanet.getMetanetNode(readmeNode.nodeTxId)).dataString;
+    let md = readmeNode.dataString;
+    if (!md) {
+      md = await Metanet.getTextFromBitFS((await Metanet.getMetanetNode(readmeNode.nodeTxId)).bitFSPath);
+    }
 
     showdown.setFlavor('github');
     const converter = new showdown.Converter();
@@ -190,6 +193,9 @@ class NodePage extends React.Component< RouteComponentProps<MatchParams> > {
           buffer = Buffer.from(await response.arrayBuffer());
         } else if (metanetNode.protocol === BcatProtocol.address) {
           buffer = await Metanet.getBcatData(metanetNode.partTxIds);
+        } else if (!metanetNode.dataString) {
+          // Load the data from BitFS
+          metanetNode.dataString = await Metanet.getTextFromBitFS(metanetNode.bitFSPath);
         }
         this.setState({fileData: (buffer && buffer.toString()) || metanetNode.dataString});
       }

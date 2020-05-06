@@ -1,4 +1,4 @@
-import './Home.css';
+import './SearchResults.css';
 
 import React from 'react';
 import { IonContent, IonGrid, IonRow, IonCol } from '@ionic/react';
@@ -14,7 +14,7 @@ import { Metanet } from '../metanet/metanet';
 import { MetanetNode } from '../metanet/metanet-node';
 import { AppContext } from '../App';
 
-class Home extends React.Component<RouteComponentProps> {
+class SearchResults extends React.Component<RouteComponentProps> {
 
   render() {
     return (
@@ -141,4 +141,4 @@ const ReposView: React.FunctionComponent<ReposViewProps> = ({repos}) => {
   );
 }
 
-export default Home;
+export default SearchResults;

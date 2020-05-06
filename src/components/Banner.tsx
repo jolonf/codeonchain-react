@@ -17,6 +17,8 @@ const Banner = withRouter(({history, match, location}) => {
       const value = (e.target as HTMLInputElement).value;
       if (value.length === 64) {
         history.push(`/tx/${(e.target as HTMLInputElement).value}`);
+      } else {
+        history.push(`/repo/${(e.target as HTMLInputElement).value}`);
       }
     }
   }

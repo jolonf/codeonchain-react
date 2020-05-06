@@ -19,18 +19,20 @@ import { RepoProtocol } from '../protocols/repo.protocol';
 
 export const METANET_FLAG     = 'meta';
 export const MIN_OUTPUT_VALUE = 546;
-export const MAX_TX_SIZE      = 90000; // Any files larger will use Bcat protocol
+export const MAX_TX_SIZE      = 900e6; // 900MB - Any files larger will use Bcat protocol
 
-const BOB_ENDPOINT = 'https://bob.planaria.network/q/1GgmC7Cg782YtQ6R9QkM58voyWeQJmJJzG/';
+const BOB_BITBUS_ENDPOINT = 'https://bob.bitbus.network/block';
+const BOB_BITSOCKET_CRAWL_ENDPOINT = 'https://bob.bitsocket.network/crawl';
+const BITFS_ENDPOINT = 'https://x.bitfs.network/';
 
-const PLANARIA_ENDPOINT = BOB_ENDPOINT;
-const PLANARIA_API_KEY = '1ErPC3RDtAJdAgXZ8dw89C8He44BnHujhp';
+const PLANARIA_TOKEN = 'eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiIxSEpnWlNESHczd043dEJXTGhHVkxHTG41ZTFBSk1lVFdzIiwiaXNzdWVyIjoiZ2VuZXJpYy1iaXRhdXRoIn0.SDB6eERBYjE2QjNRUU5meG5WNTdQQzBxOVhsUHBLQ2MzaU9laU1waVFSclJRbFlnRlB0OXV0RzFPS29LTG9ZZVVNK1JQVzFDOU5mMlZhUDBzMjc1R1JNPQ';
 
 export interface Cell {
   s: string,
   ls: string,
   b: string,
-  lb: string
+  lb: string,
+  f: string
 }
 
 export class Metanet {
@@ -167,20 +169,57 @@ export class Metanet {
     return nodes.sort((a, b) => a.name < b.name ? -1 : 1);
   }
 
+  /**
+   * BitBus provides txs confirmed in blocks, whereas
+   * BitSocket provides access to all txs in the last 24 hours 
+   * including unconfirmed txs in the mempool.
+   * This function queries both and returns a single array
+   * of transactions from both, removing duplicates.
+   * @param query 
+   * @returns array of txs
+   */
+  static async queryPlanariaBusAndSocket(query: any): Promise<any[]> {
+    const jsonQuery = JSON.stringify(query);
+    const responses = await Promise.all([
+        fetch(BOB_BITBUS_ENDPOINT, { 
+          method: 'POST',
+          headers: { 
+            token: PLANARIA_TOKEN,
+            'Content-Type': 'application/json; charset=utf-8'
+          },
+          body: jsonQuery
+        }),
+        fetch(BOB_BITSOCKET_CRAWL_ENDPOINT, { 
+          method: 'POST',
+          headers: { 
+            token: PLANARIA_TOKEN,
+            'Content-Type': 'application/json; charset=utf-8'
+          },
+          body: jsonQuery
+        })
+      ]
+    );
+
+    const textResponses = await Promise.all(responses.map(response => response.text()));
+    const [blockTxs, eventTxs] = textResponses.map(text => text.split('\n')
+                                                               .filter(s => s.length > 0)
+                                                               .map(json => JSON.parse(json)));
+
+    // Remove event txs that have already been confirmed in a block                                                             
+    const filteredEventTxs = eventTxs.filter(etx => !blockTxs.find(btx => btx.tx.h === etx.tx.h));
+
+    return blockTxs.concat(filteredEventTxs);
+  }
+
   static async getMetanetNodes(query: any): Promise<MetanetNode[]> {
-    const url = PLANARIA_ENDPOINT + btoa(JSON.stringify(query));
-    const response = await fetch(url, { headers: { key: PLANARIA_API_KEY } });
-    const json = await response.json();
-    //console.log(json);
+    const txs = await this.queryPlanariaBusAndSocket(query);
     const children = [] as MetanetNode[];
 
-    const items = json.u.reverse().concat(json.c);
-
-    for (const item of items) { 
+    for (const tx of txs) { 
       const metanetNode = new MetanetNode();
-      metanetNode.nodeTxId = item.tx.h;
+      metanetNode.nodeTxId = tx.tx.h;
 
-      for (const output of item.out) {
+      for (const output of tx.out) {
         for (const cell of output.tape) {
           if (cell.cell[0]) {
             const protocolAddress = cell.cell[0].s;
@@ -221,16 +260,12 @@ export class Metanet {
           }
       }
     };
-    const url = PLANARIA_ENDPOINT + btoa(JSON.stringify(query));
-    const response = await fetch(url, { headers: { key: PLANARIA_API_KEY } });
-    const json = await response.json();
-    //console.log(json);
-    const items = json.u.reverse().concat(json.c);
+    const txs = await this.queryPlanariaBusAndSocket(query);
 
     const protocols = [] as any[];
 
-    for (const item of items) { 
-      for (const output of item.out) {
+    for (const tx of txs) { 
+      for (const output of tx.out) {
         for (const cell of output.tape) {
           const protocolAddress = cell.cell[0].s;
           const protocol = this.protocols.find(p => p.address === protocolAddress);
@@ -241,6 +276,15 @@ export class Metanet {
       }
     }
     return protocols;
+  }
+
+  static async getTextFromBitFS(bitFSPath: string) {
+    let text = '';
+    if (bitFSPath) {
+      const response = await fetch(BITFS_ENDPOINT + bitFSPath);
+      text = await response.text();
+    }
+    return text;
   }
 
   /**
