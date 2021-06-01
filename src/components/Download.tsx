@@ -43,11 +43,11 @@ class Download extends React.Component<DownloadProps> {
     this.setState({message: 'Complete'});
   }
 
-  async download(zip: JSZip, node: MetanetNode, path = '') {
+  async download(zip: JSZip | null, node: MetanetNode, path = '') {
     this.setState({message: `Zipping: ${path}/${node.name}`});
 
     if (node.isDirectory()) {
-      const folder = zip.folder(node.name);
+      const folder = zip!.folder(node.name);
       const children = await Metanet.getChildren(node.nodeAddress, node.nodeTxId, true);
       for (const child of children) {
         await this.download(folder, child, path + '/' + node.name);
@@ -58,9 +58,9 @@ class Download extends React.Component<DownloadProps> {
           txId: node.link!.txId
         }
       }
-      zip.file(node.name, JSON.stringify(json, null, 2));
+      zip!.file(node.name, JSON.stringify(json, null, 2));
     } else {
-      zip.file(node.name, node.dataBase64, {base64: true});
+      zip!.file(node.name, node.dataBase64, {base64: true});
     }
   }
 

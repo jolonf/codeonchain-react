@@ -257,7 +257,7 @@ class AddFilesModal extends React.Component<AddFilesProps> {
     // If there is a .bsvignore file, read it in and append to the ignore list
     const bsvignoreFile = fileTrees.find(fileTree => fileTree.name === '.bsvignore');
     if (bsvignoreFile) {
-      const text = await readAsText(bsvignoreFile.file) as string;
+      const text = await readAsText(bsvignoreFile.file!) as string;
       const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       ignoreList = [...ignoreList, ...lines];
     }

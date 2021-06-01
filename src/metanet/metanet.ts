@@ -105,7 +105,7 @@ export class Metanet {
               "out.tape.cell": {
                 "$elemMatch": {
                     "i": 0,
-                    "s": RepoProtocol.address
+                    "b": btoa(RepoProtocol.address)
                 }
               }
             },
@@ -113,7 +113,7 @@ export class Metanet {
               "out.tape.cell": {
                 "$elemMatch": {
                     "i": 6,
-                    "s": "0"
+                    "b": btoa("0") // Ignore hidden repos
                 }
               }
             }
@@ -126,7 +126,7 @@ export class Metanet {
       }
     });
 
-    return metanetNodes;
+    return metanetNodes.reverse();
   }
 
   /**
@@ -148,7 +148,7 @@ export class Metanet {
               "out.tape.cell": {
                 "$elemMatch": {
                   "i": 0,
-                  "s": "meta"
+                  "b": btoa("meta")
                 }
               }
             },
@@ -156,7 +156,7 @@ export class Metanet {
               "out.tape.cell": {
                 "$elemMatch": {
                   "i": 2,
-                  "s": txId
+                  "b": btoa(txId)
                 }
               }
             }
@@ -206,9 +206,9 @@ export class Metanet {
                                                                .map(json => JSON.parse(json)));
 
     // Remove event txs that have already been confirmed in a block                                                             
-    const filteredEventTxs = eventTxs.filter(etx => !blockTxs.find(btx => btx.tx.h === etx.tx.h));
+    //const filteredEventTxs = eventTxs.filter(etx => !blockTxs.find(btx => btx.tx.h === etx.tx.h));
 
-    return blockTxs.concat(filteredEventTxs);
+    return blockTxs;//.concat(filteredEventTxs);
   }
 
   static async getMetanetNodes(query: any): Promise<MetanetNode[]> {
