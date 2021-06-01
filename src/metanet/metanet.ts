@@ -206,9 +206,9 @@ export class Metanet {
                                                                .map(json => JSON.parse(json)));
 
     // Remove event txs that have already been confirmed in a block                                                             
-    //const filteredEventTxs = eventTxs.filter(etx => !blockTxs.find(btx => btx.tx.h === etx.tx.h));
+    const filteredEventTxs = eventTxs.filter(etx => !blockTxs.find(btx => btx.tx.h === etx.tx.h));
 
-    return blockTxs;//.concat(filteredEventTxs);
+    return blockTxs.concat(filteredEventTxs);
   }
 
   static async getMetanetNodes(query: any): Promise<MetanetNode[]> {
