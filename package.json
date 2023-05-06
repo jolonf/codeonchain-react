@@ -5,7 +5,7 @@
   "dependencies": {
     "@ionic/react": "^0.0.9",
     "@ionic/react-router": "^0.0.9",
-    "@moneybutton/react-money-button": "^0.24.4",
+    "@moneybutton/react-money-button": "^0.38.8",
     "@types/file-saver": "^2.0.2",
     "@types/jest": "24.0.11",
     "@types/jszip": "^3.4.1",
@@ -18,7 +18,7 @@
     "@types/react-transition-group": "^4.4.1",
     "@types/showdown": "^1.9.3",
     "bitindex-sdk": "^3.4.2",
-    "bsv": "^0.29.2",
+    "bsv": "^2.0.10",
     "file-saver": "^2.0.5",
     "ionicons": "^4.6.3",
     "jszip": "^3.6.0",
