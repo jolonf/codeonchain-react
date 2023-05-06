@@ -5,7 +5,7 @@
   "dependencies": {
     "@ionic/react": "^0.0.9",
     "@ionic/react-router": "^0.0.9",
-    "@moneybutton/react-money-button": "^0.24.4",
+    "@moneybutton/react-money-button": "^0.38.8",
     "@types/file-saver": "^2.0.2",
     "@types/jest": "24.0.11",
     "@types/jszip": "^3.4.1",
